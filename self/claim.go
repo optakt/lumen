@@ -3,6 +3,7 @@ package self
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	lumen "github.com/optakt/lumen"
@@ -39,6 +40,7 @@ type Claim struct {
 // SelfModel is the agent's live epistemic state — a Lumen belief store
 // representing what the agent believes, how it knows it, and how confident it is.
 type SelfModel struct {
+	mu         sync.Mutex         // guards claims and corrections; store locks itself
 	store      *lumen.Store
 	claims     map[string]*Claim  // claim ID -> Claim
 	corrections []Correction      // history of corrections
@@ -64,19 +66,13 @@ func NewSelfModel() *SelfModel {
 }
 
 // Assert records a claim the agent is making.
+//
+// When the claim corrects a prior one (Replaces set), the new claim is
+// asserted first and the prior retracted only after success — the reverse
+// order loses the old claim without gaining the new one if assertion fails.
 func (m *SelfModel) Assert(c *Claim) error {
 	if c.AssertedAt.IsZero() {
 		c.AssertedAt = time.Now()
-	}
-	// If this corrects a prior claim, retract it
-	if c.Replaces != "" {
-		if err := m.Retract(c.Replaces, "corrected: superseded by "+c.ID); err != nil {
-			return fmt.Errorf("retract prior: %w", err)
-		}
-		m.corrections = append(m.corrections, Correction{
-			At: c.AssertedAt, RetractedID: c.Replaces,
-			Reason: "corrected", ReplacedBy: c.ID,
-		})
 	}
 
 	// Create a validity sentinel record for this claim.
@@ -101,9 +97,27 @@ func (m *SelfModel) Assert(c *Claim) error {
 		Derivation: derivation,
 	}
 	if err := m.store.Believe(belief); err != nil {
+		// Clean up the sentinel so a retried assertion doesn't conflict.
+		_ = m.store.Retract(sentinelID, "orphaned: claim assertion failed", c.AssertedAt)
 		return fmt.Errorf("believe: %w", err)
 	}
+
+	// The new claim is in place — now retract the one it corrects.
+	if c.Replaces != "" {
+		if err := m.Retract(c.Replaces, "corrected: superseded by "+c.ID); err != nil {
+			return fmt.Errorf("new claim %s asserted, but retracting prior %s failed: %w", c.ID, c.Replaces, err)
+		}
+		m.mu.Lock()
+		m.corrections = append(m.corrections, Correction{
+			At: c.AssertedAt, RetractedID: c.Replaces,
+			Reason: "corrected", ReplacedBy: c.ID,
+		})
+		m.mu.Unlock()
+	}
+
+	m.mu.Lock()
 	m.claims[c.ID] = c
+	m.mu.Unlock()
 	return nil
 }
 
@@ -131,6 +145,8 @@ func (m *SelfModel) Reflect(claimID string, now time.Time) (*lumen.ReflectiveAns
 
 // FrameReport returns a summary of what the agent believes in each frame.
 func (m *SelfModel) FrameReport(now time.Time) string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	var sb strings.Builder
 	sb.WriteString("Self-model report\n")
 	sb.WriteString(fmt.Sprintf("Session started: %s\n", m.sessionStart.Format(time.RFC3339)))
@@ -179,6 +195,8 @@ func (m *SelfModel) FrameReport(now time.Time) string {
 
 // EpistemicStatus returns a human-readable description of a claim's epistemic quality.
 func (m *SelfModel) EpistemicStatus(claimID string, now time.Time) string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	c, ok := m.claims[claimID]
 	if !ok {
 		return fmt.Sprintf("claim %s not found", claimID)
