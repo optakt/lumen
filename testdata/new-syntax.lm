@@ -1,0 +1,58 @@
+// new-syntax.lm: exercises all parser extensions
+
+frame neural-diagnostic
+    composition: opaque
+    source: "cardiovascular_v3"
+    calibration: isotonic
+    opacity-reason: "weights not individually addressable"
+    decay: exponential halflife: 365d
+
+frame philosophical
+    composition: bayesian
+    decay: none
+
+frame empirical
+    composition: bayesian
+    decay: exponential halflife: 43800h
+
+record prior-assumption in philosophical
+    "Claims from incompatible frames cannot be combined without an explicit bridge."
+    provenance: foundational
+
+record zombie-argument in philosophical
+    "The zombie argument: physically identical being with no phenomenal experience is conceivable."
+    at: "1995-01-01T00:00:00Z"
+
+record knowledge-argument in philosophical
+    "Mary's Room: Mary knows all physical facts about color but learns something new upon seeing red."
+    at: "1995-01-01T00:00:00Z"
+
+record cantor-1891 in philosophical
+    "Cantor's diagonal argument: no bijection between a set and its power set."
+    at: "1891-01-01"
+
+believe hard-problem-real in philosophical
+    "The hard problem of consciousness is real."
+    prior: [0.35, 0.65]
+    evidence zombie-ev
+        lr: [3.0, 6.0]
+        confidence: 0.85
+        source: zombie-argument
+    evidence knowledge-ev
+        lr: [2.5, 5.0]
+        confidence: 0.80
+        source: knowledge-argument
+        correlates-with: zombie-ev 0.55
+    from: zombie-argument, knowledge-argument
+
+bridge philosophical-to-empirical : philosophical → empirical
+    loss: "collapses source_provenance"
+    method: correspondence
+    verified: false
+    assumes: "philosophical claims have empirical content"
+
+query what-changed-hard-problem
+    target: hard-problem-real
+    select: confidence-changes
+    where: change > 0.1
+    since: "2024-01-01T00:00:00Z"

@@ -1,0 +1,83 @@
+// Lumen example: consciousness philosophy belief store
+// Demonstrates frames, decay, foundational records, named queries, and opaque frames.
+//
+// Load with: lumen-db consciousness.lm
+// Or in code: LoadFile(content, store, time.Now())
+
+// ── Frames ──────────────────────────────────────────────────────────────────
+
+frame philosophical
+    composition: bayesian
+    decay: none
+
+frame empirical
+    composition: bayesian
+    decay: exponential halflife: 730d
+    on_stale_derivation: mark_suspect
+
+// ── Records (foundational) ───────────────────────────────────────────────────
+
+record conscious-experience-exists in philosophical
+    "Conscious experience exists. Denying it is self-refuting: the denial itself is an experience."
+    at: "1644-01-01T00:00:00Z"
+    provenance: foundational
+
+record chalmers-1995 in philosophical
+    "Chalmers 1995: the hard problem names the gap between physical processes and subjective experience."
+    at: "1995-01-01T00:00:00Z"
+
+record zombie-argument in philosophical
+    "Philosophical zombies are conceivable. Their conceivability implies consciousness is not entailed by physical facts."
+    at: "1996-01-01T00:00:00Z"
+
+record knowledge-argument in philosophical
+    "Mary the color scientist learns new facts on seeing red, despite knowing all physical facts beforehand."
+    at: "1982-01-01T00:00:00Z"
+
+// ── Records (empirical) ──────────────────────────────────────────────────────
+
+record cogitate-2023 in empirical
+    "Cogitate Consortium 2023: PFC active during conscious perception, contradicting IIT exclusion. n=256."
+    at: "2023-06-01T00:00:00Z"
+
+record iit-letter-2023 in empirical
+    "124 neuroscientists 2023: open letter calling IIT pseudoscience for unfalsifiable predictions."
+    at: "2023-09-15T00:00:00Z"
+
+record gwt-fmri-2024 in empirical
+    "fMRI meta-analysis 2024: GWT global workspace signature replicated across 18 labs, n=3400."
+    at: "2024-03-01T00:00:00Z"
+
+// ── Beliefs ──────────────────────────────────────────────────────────────────
+
+believe hard-problem in philosophical
+    "The hard problem of consciousness is real: functional accounts leave subjective experience unexplained."
+    confidence: 0.78
+    from: conscious-experience-exists, chalmers-1995, zombie-argument, knowledge-argument
+
+believe gwt-strong in empirical
+    "Global Workspace Theory has the strongest empirical backing among major consciousness theories."
+    confidence: 0.72
+    from: cogitate-2023, gwt-fmri-2024
+
+believe iit-viable in empirical
+    "IIT remains a viable research program despite recent criticism."
+    confidence: 0.35
+    from: cogitate-2023, iit-letter-2023
+
+believe physicalism-challenged in philosophical
+    "Physicalism faces a genuine explanatory gap regarding consciousness."
+    confidence: 0.65
+    from: hard-problem, zombie-argument
+
+// ── Named queries ─────────────────────────────────────────────────────────────
+
+query recent-gwt-changes
+    target: gwt-strong
+    select: confidence-changes
+    since: "2023-01-01T00:00:00Z"
+    where: change > 0.05
+
+query iit-retractions
+    target: iit-viable
+    select: retraction-events
