@@ -14,6 +14,14 @@ type Store struct {
 	beliefs map[string]*Belief
 	// derivation index: beliefID -> set of beliefIDs that depend on it
 	dependents map[string]map[string]bool
+	// conflictCache caches the result of ConflictScan. It is invalidated
+	// by any mutation that could change the conflict graph. Guarded by mu.
+	conflictCache []Conflict
+	conflictDirty bool
+	// searchIndex caches the TF-IDF search index. Rebuilt on the first query
+	// after any write. Guarded by mu.
+	searchIndex  *SearchIndex
+	searchDirty  bool
 	// Graph holds the full typed relationship structure.
 	// derivation edges here supersede the dependents map (kept for compatibility).
 	Graph *BeliefGraph
@@ -36,6 +44,8 @@ func NewStore() *Store {
 		records:    make(map[string]*Record),
 		beliefs:    make(map[string]*Belief),
 		dependents: make(map[string]map[string]bool),
+		conflictDirty: true,
+		searchDirty:  true,
 		Graph:      NewBeliefGraph(),
 		Entities:   NewEntityGraph(),
 		Bridges:    NewBridgeRegistry(),
@@ -68,6 +78,8 @@ func (s *Store) Assert(r *Record) error {
 		return fmt.Errorf("unknown frame %s", r.Frame)
 	}
 	s.records[r.ID] = r
+	s.invalidateConflicts()
+	s.invalidateSearch()
 	s.mu.Unlock()
 	// Index entities and record temporal event after releasing store lock.
 	s.Entities.ExtractAndIndex(r.ID, r.Content)
@@ -182,6 +194,8 @@ func (s *Store) Believe(b *Belief) error {
 		b.ImportedDecay = append(b.ImportedDecay, imported...)
 	}
 	s.beliefs[b.ID] = b
+	s.invalidateConflicts()
+	s.invalidateSearch()
 	derivation := append([]string{}, b.Derivation...)
 	s.mu.Unlock()
 
@@ -204,6 +218,7 @@ func (s *Store) Retract(recordID string, reason string, at time.Time) error {
 	rec.RetractReason = reason
 	// Mark all beliefs derived from this record as suspect (recursive)
 	s.markSuspect(recordID)
+	s.invalidateConflicts()
 	return nil
 }
 

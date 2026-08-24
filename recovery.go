@@ -70,6 +70,7 @@ func (s *Store) Recover(beliefID string, now time.Time) error {
 	// Restore to active.
 	b.State = BeliefActive
 	b.ContractedBy = ""
+	s.invalidateConflicts()
 
 	// Re-populate graph indexes.
 	for _, srcID := range b.Derivation {

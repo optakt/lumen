@@ -129,6 +129,7 @@ func (s *Store) ReAssert(beliefID, newContent string, newConfidence float64, now
 	}
 	b.State = BeliefActive
 	b.AssertedAt = now
+	s.invalidateConflicts()
 
 	// Refresh cross-frame snapshots: re-assertion is a re-evaluation, so the
 	// imported confidence is re-read from the source's current state. Without
