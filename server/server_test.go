@@ -221,3 +221,36 @@ func TestSelfCorrect(t *testing.T) {
 	}
 	t.Logf("correction: %v", correction)
 }
+
+// TestLegacyRedirects verifies legacy paths issue 308 (method- and
+// body-preserving) redirects with concrete paths and query strings intact.
+func TestLegacyRedirects(t *testing.T) {
+	srv := newTestServer(t)
+
+	// GET with query string
+	req := httptest.NewRequest("GET", "/context?max=5&min_confidence=0.7", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+	if w.Code != http.StatusPermanentRedirect {
+		t.Fatalf("GET /context: want 308, got %d", w.Code)
+	}
+	if loc := w.Header().Get("Location"); loc != "/v1/context?max=5&min_confidence=0.7" {
+		t.Errorf("query string lost: Location=%q", loc)
+	}
+
+	// POST must be 308 (301 would drop method and body)
+	req = httptest.NewRequest("POST", "/ingest", strings.NewReader(`{"text":"x"}`))
+	w = httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+	if w.Code != http.StatusPermanentRedirect {
+		t.Fatalf("POST /ingest: want 308, got %d", w.Code)
+	}
+
+	// Parameterised path must substitute the concrete ID
+	req = httptest.NewRequest("GET", "/explain/bel-12345", nil)
+	w = httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+	if loc := w.Header().Get("Location"); loc != "/v1/explain/bel-12345" {
+		t.Errorf("path value not preserved: Location=%q", loc)
+	}
+}

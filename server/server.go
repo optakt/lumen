@@ -88,21 +88,35 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /v1/explain/{id}",   s.handleExplain)
 
 	// Legacy redirects — keep existing integrations working.
-	for _, pair := range []struct{ from, to string }{
-		{"GET /health",       "/v1/health"},
-		{"GET /context",      "/v1/context"},
-		{"GET /beliefs",      "/v1/beliefs"},
-		{"POST /records",     "/v1/records"},
-		{"POST /believe",     "/v1/believe"},
-		{"POST /retract",     "/v1/retract"},
-		{"POST /ingest",      "/v1/ingest"},
-		{"GET /explain/{id}", "/v1/explain/{id}"},
+	//
+	// 308 Permanent Redirect, not 301: clients follow 301 on POST by
+	// re-issuing GET without the body, silently breaking POST endpoints.
+	// 308 preserves both method and body.
+	//
+	// The target is built from the request itself — path plus query — so
+	// parameterised paths (/explain/{id}) and query strings survive the hop.
+	for _, from := range []string{
+		"GET /health",
+		"GET /context",
+		"GET /beliefs",
+		"POST /records",
+		"POST /believe",
+		"POST /retract",
+		"POST /ingest",
+		"GET /explain/{id}",
 	} {
-		pair := pair
-		s.mux.HandleFunc(pair.from, func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r, pair.to, http.StatusMovedPermanently)
-		})
+		s.mux.HandleFunc(from, redirectToV1)
 	}
+}
+
+// redirectToV1 issues a 308 to the /v1-prefixed equivalent of the request,
+// preserving the concrete path segments and the query string.
+func redirectToV1(w http.ResponseWriter, r *http.Request) {
+	target := "/v1" + r.URL.Path
+	if r.URL.RawQuery != "" {
+		target += "?" + r.URL.RawQuery
+	}
+	http.Redirect(w, r, target, http.StatusPermanentRedirect)
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {

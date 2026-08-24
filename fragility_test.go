@@ -182,3 +182,54 @@ func TestFragilityComposedPath(t *testing.T) {
 	}
 	t.Logf("fragility: drop=%.4f weakest=%s", entry.Drop, entry.WeakestSource)
 }
+
+// TestFragilityComposedDecayScale verifies sensitivity results are scaled
+// into decayed space. The old code passed decayed currentConf as the full
+// posterior while PosteriorWithout stayed undecayed — for an aged belief,
+// ConfWithout could exceed CurrentConf, implying evidence removal *raises*
+// confidence.
+func TestFragilityComposedDecayScale(t *testing.T) {
+	s := NewStore()
+	t0 := time.Now().Add(-14 * 24 * time.Hour) // asserted two weeks ago
+
+	// 7-day halflife: two weeks later confidence is ~25% of assertion value.
+	s.RegisterFrame(Frame{Name: "fast-decay", Decay: DecayPolicy{
+		Kind: DecayExponential, Halflife: 7 * 24 * time.Hour,
+	}})
+
+	r1 := &Record{ID: "r-a", Frame: "fast-decay", Content: "Supporting evidence A", Timestamp: t0}
+	r2 := &Record{ID: "r-b", Frame: "fast-decay", Content: "Supporting evidence B", Timestamp: t0}
+	if err := s.Assert(r1); err != nil { t.Fatal(err) }
+	if err := s.Assert(r2); err != nil { t.Fatal(err) }
+
+	evidence := []Evidence{
+		{SourceID: "r-a", Confidence: 0.8, LikelihoodRatio: 3.0},
+		{SourceID: "r-b", Confidence: 0.7, LikelihoodRatio: 2.0},
+	}
+	b := &Belief{
+		ID: "b-aged", Content: "An aged composed belief", Confidence: 0.8,
+		Frame: "fast-decay", AssertedAt: t0, Derivation: []string{"r-a", "r-b"},
+	}
+	if _, err := s.BelieveComposed(b, 0.5, evidence); err != nil { t.Fatal(err) }
+
+	now := time.Now()
+	entries := s.FragilityScan(now)
+	if len(entries) == 0 { t.Fatal("expected a fragility entry") }
+	e := entries[0]
+
+	t.Logf("current=%.4f confWithout=%.4f drop=%.4f minCut=%d",
+		e.CurrentConf, e.ConfWithout, e.Drop, e.MinCut)
+
+	if e.CurrentConf > 0.35 {
+		t.Fatalf("test setup wrong: expected heavy decay, current=%.4f", e.CurrentConf)
+	}
+	if e.ConfWithout >= e.CurrentConf {
+		t.Errorf("scale mixing: ConfWithout (%.4f) >= CurrentConf (%.4f)", e.ConfWithout, e.CurrentConf)
+	}
+	if e.Drop <= 0 || e.Drop > e.CurrentConf {
+		t.Errorf("drop out of range: %.4f (current %.4f)", e.Drop, e.CurrentConf)
+	}
+	if e.MinCut != 2 {
+		t.Errorf("both evidence blocks support (LR>1): want MinCut=2, got %d", e.MinCut)
+	}
+}

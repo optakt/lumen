@@ -111,22 +111,58 @@ func (s *Store) fragEntryFor(beliefID, content string, currentConf float64, deri
 	defer s.mu.RUnlock()
 
 	// Path 1: Bayesian-composed belief — use sensitivity analysis (exact).
+	//
+	// Scale consistency: SensitivityAnalysis computes posteriors in undecayed
+	// space (prior × evidence at assertion time), but currentConf is decayed.
+	// We compute the undecayed full posterior, run sensitivity against it, and
+	// scale results into decayed space via decayFactor = currentConf / fullPosterior.
+	// This is the same proportional model norScale uses, applied consistently.
 	if b != nil && len(b.CompositionEvidence) > 0 {
-		sens, err := SensitivityAnalysis(b.CompositionPrior, b.CompositionEvidence, currentConf)
-		if err == nil && len(sens.Sources) > 0 {
-			worst := sens.Sources[0] // ranked by |MarginalContribution| descending
-			drop := worst.MarginalContribution
-			if drop < 0 { drop = -drop }
-			return &FragilityEntry{
-				BeliefID:      beliefID,
-				BeliefContent: content,
-				CurrentConf:   currentConf,
-				WeakestSource: worst.SourceID,
-				WeakestKind:   "evidence",
-				ConfWithout:   worst.PosteriorWithout,
-				Drop:          drop,
-				TotalSources:  len(b.CompositionEvidence),
-				MinCut:        1, // removing the worst evidence block is the min cut
+		fullPosterior, cerr := BayesianCompose(b.CompositionPrior, b.CompositionEvidence)
+		if cerr == nil && fullPosterior > 1e-9 {
+			sens, err := SensitivityAnalysis(b.CompositionPrior, b.CompositionEvidence, fullPosterior)
+			if err == nil && len(sens.Sources) > 0 {
+				decayFactor := currentConf / fullPosterior
+
+				// Fragility concerns supporting evidence only: the source whose
+				// removal causes the largest *drop*. Contradicting evidence (whose
+				// removal raises the posterior) is not a fragility concern.
+				var worst *SourceContribution
+				var worstDrop float64
+				for i := range sens.Sources {
+					sc := &sens.Sources[i]
+					d := (fullPosterior - sc.PosteriorWithout) * decayFactor
+					if d > worstDrop {
+						worstDrop = d
+						worst = sc
+					}
+				}
+				if worst != nil {
+					// MinCut for composed beliefs: number of supporting evidence
+					// blocks. Removing all of them returns the posterior to the
+					// prior — with a nonzero prior the belief never collapses to
+					// zero, so this counts blocks needed to lose all evidential
+					// support, not blocks needed to reach zero.
+					supporting := 0
+					for _, ev := range b.CompositionEvidence {
+						if ev.LikelihoodRatio > 1 {
+							supporting++
+						}
+					}
+					return &FragilityEntry{
+						BeliefID:      beliefID,
+						BeliefContent: content,
+						CurrentConf:   currentConf,
+						WeakestSource: worst.SourceID,
+						WeakestKind:   "evidence",
+						ConfWithout:   worst.PosteriorWithout * decayFactor,
+						Drop:          worstDrop,
+						TotalSources:  len(b.CompositionEvidence),
+						MinCut:        supporting,
+					}
+				}
+				// All evidence is contradicting — removal only raises confidence.
+				// Fall through to the derivation path.
 			}
 		}
 	}

@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -60,7 +59,7 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 			resp.Skipped++
 			continue
 		}
-		id := fmt.Sprintf("ing-rec-%d", time.Now().UnixNano())
+		id := newID("ing-rec")
 		r := &lumen.Record{
 			ID:        id,
 			Content:   rec.Content,
@@ -87,7 +86,7 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 				sources = append(sources, storeID)
 			}
 		}
-		id := fmt.Sprintf("ing-bel-%d", time.Now().UnixNano())
+		id := newID("ing-bel")
 		b := &lumen.Belief{
 			ID:         id,
 			Content:    bel.Content,
