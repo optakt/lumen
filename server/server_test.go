@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"bytes"
+	"strings"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -146,4 +147,77 @@ func TestRetract(t *testing.T) {
 	if w2.Code != 204 {
 		t.Fatalf("retract: want 204, got %d: %s", w2.Code, w2.Body)
 	}
+}
+
+// ─── Self-model tests ─────────────────────────────────────────────────────────
+
+func TestSelfClaim(t *testing.T) {
+	srv := newTestServer(t)
+
+	w := post(t, srv, "/self/claim", `{
+		"kind": "asserted",
+		"content": "The retrodiction problem arises when decay policies are applied retroactively",
+		"confidence": 0.85
+	}`)
+	if w.Code != 201 {
+		t.Fatalf("self/claim: want 201, got %d: %s", w.Code, w.Body)
+	}
+	var created map[string]any
+	_ = json.NewDecoder(w.Body).Decode(&created)
+	id, _ := created["id"].(string)
+	if id == "" {
+		t.Fatal("no id returned")
+	}
+	t.Logf("created claim: %s (frame: %s)", id, created["frame"])
+
+	// It should appear in self/claims
+	w2 := get(t, srv, "/self/claims")
+	var claims []map[string]any
+	_ = json.NewDecoder(w2.Body).Decode(&claims)
+	if len(claims) == 0 {
+		t.Fatal("expected self claim in list")
+	}
+}
+
+func TestSelfContext(t *testing.T) {
+	srv := newTestServer(t)
+	post(t, srv, "/self/claim", `{"kind":"derived","content":"Frame-dependent decay is the correct model for cross-frame beliefs","confidence":0.78}`)
+	post(t, srv, "/self/claim", `{"kind":"retrieved","content":"The hard problem of consciousness resists functional reduction","confidence":0.82}`)
+
+	w := get(t, srv, "/self/context")
+	if w.Code != 200 {
+		t.Fatalf("want 200, got %d: %s", w.Code, w.Body)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "epistemic commitments") {
+		t.Errorf("expected header in context output, got:\n%s", body)
+	}
+	t.Logf("self/context:\n%s", body)
+}
+
+func TestSelfCorrect(t *testing.T) {
+	srv := newTestServer(t)
+
+	// Assert an initial claim.
+	w := post(t, srv, "/self/claim", `{"kind":"asserted","content":"Illusionism adequately addresses the hard problem","confidence":0.6}`)
+	var c map[string]any
+	_ = json.NewDecoder(w.Body).Decode(&c)
+	priorID := c["id"].(string)
+
+	// Correct it.
+	body, _ := json.Marshal(map[string]string{
+		"replaces_id": priorID,
+		"content":     "Illusionism fails to account for the phenomenal character of experience",
+		"reason":      "counterarguments from knowledge argument",
+	})
+	w2 := post(t, srv, "/self/correct", string(body))
+	if w2.Code != 201 {
+		t.Fatalf("self/correct: want 201, got %d: %s", w2.Code, w2.Body)
+	}
+	var correction map[string]any
+	_ = json.NewDecoder(w2.Body).Decode(&correction)
+	if correction["retracted_id"] != priorID {
+		t.Errorf("expected retracted_id=%s, got %v", priorID, correction["retracted_id"])
+	}
+	t.Logf("correction: %v", correction)
 }

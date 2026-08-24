@@ -72,6 +72,7 @@ func New(cfg Config, logger *slog.Logger) (*Server, error) {
 
 	s := &Server{cfg: cfg, store: store, db: db, mux: http.NewServeMux(), logger: logger}
 	s.routes()
+	s.routeSelf()
 	return s, nil
 }
 
