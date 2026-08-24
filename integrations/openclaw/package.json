@@ -1,0 +1,21 @@
+{
+  "name": "@optakt/lumen-openclaw",
+  "version": "0.3.0",
+  "type": "module",
+  "description": "Lumen belief store integration for OpenClaw",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/optakt/lumen"
+  },
+  "license": "Apache-2.0",
+  "peerDependencies": {
+    "openclaw": ">=2026.3.24-beta.2"
+  },
+  "openclaw": {
+    "extensions": ["./index.ts"],
+    "compat": {
+      "pluginApi": ">=2026.3.24-beta.2",
+      "minGatewayVersion": "2026.3.24-beta.2"
+    }
+  }
+}

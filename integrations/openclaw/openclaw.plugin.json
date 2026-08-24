@@ -1,0 +1,40 @@
+{
+  "id": "lumen",
+  "name": "Lumen Belief Store",
+  "description": "Tracks epistemic state across agent turns. Injects current beliefs before each model call; extracts and asserts new claims from assistant responses.",
+  "contracts": {
+    "hooks": [
+      "agent_turn_prepare",
+      "llm_output"
+    ]
+  },
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "url": {
+        "type": "string",
+        "description": "Lumen server base URL",
+        "default": "http://localhost:3737"
+      },
+      "maxBeliefs": {
+        "type": "number",
+        "description": "Maximum beliefs to inject per turn",
+        "default": 8
+      },
+      "minConfidence": {
+        "type": "number",
+        "description": "Minimum confidence threshold (0–1)",
+        "default": 0.5
+      },
+      "selfContext": {
+        "type": "boolean",
+        "description": "Include self-model commitments in injected context",
+        "default": true
+      }
+    }
+  }
+}

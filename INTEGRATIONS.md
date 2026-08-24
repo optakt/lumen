@@ -115,6 +115,33 @@ Runs NLP extraction over `text`, automatically detecting frames and linking deri
 | `-ingest-confidence` | `0.55` | Min confidence for `/ingest` |
 | `-frame` | `reasoning` | Default frame for ingested beliefs |
 
+## OpenClaw
+
+[OpenClaw](https://github.com/openclaw/openclaw) uses a typed TypeScript plugin API. The Lumen plugin registers two hooks: `agent_turn_prepare` for context injection and `llm_output` for claim extraction from `assistantTexts`.
+
+See [`integrations/openclaw/`](integrations/openclaw/) for the plugin files.
+
+**Quick start:**
+
+```bash
+# 1. Start the Lumen server
+lumen-server -addr :3737 -db ~/.lumen/beliefs.db
+
+# 2. Add to openclaw.config.json
+```
+
+```json
+{
+  "plugins": {
+    "lumen": {
+      "url": "http://localhost:3737"
+    }
+  }
+}
+```
+
+Copy `integrations/openclaw/` into your OpenClaw plugins directory.
+
 ## Hermes
 
 [Hermes](https://github.com/NousResearch/hermes-agent) uses a shell hook system where any executable can register for agent lifecycle events. The `lumen-hook` binary reads Hermes's JSON payload from stdin and calls the Lumen HTTP API.
