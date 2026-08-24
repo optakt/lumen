@@ -373,9 +373,8 @@ func main() {
 			}
 		case "search":
 			if len(args) == 0 { fmt.Println("usage: search <terms>"); continue }
-			idx := store.BuildSearchIndex()
 			query := strings.Join(args, " ")
-			results := store.Search(idx, query, 10)
+			results := store.CachedSearch(query, 10)
 			if len(results) == 0 { fmt.Println("No results."); continue }
 			for _, r := range results {
 				fmt.Printf("  [%.2f] %-8s %-20s  %s\n",
