@@ -10,7 +10,7 @@ import (
 func TestBeliefVersioning(t *testing.T) {
 	s := NewStore()
 	now := time.Now()
-	s.RegisterFrame(Frame{Name: "empirical", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "empirical", Decay: DecayPolicy{Kind: DecayNone}})
 
 	s.Assert(&Record{ID: "r1", Frame: "empirical", Content: "Original finding", Timestamp: now})
 	s.Believe(&Belief{ID: "b1", Frame: "empirical", Content: "Original conclusion", Confidence: 0.8, AssertedAt: now, Derivation: []string{"r1"}})
@@ -57,7 +57,7 @@ func TestVersionAt(t *testing.T) {
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	t1 := t0.Add(24 * time.Hour)
 	t2 := t0.Add(48 * time.Hour)
-	s.RegisterFrame(Frame{Name: "empirical", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "empirical", Decay: DecayPolicy{Kind: DecayNone}})
 
 	s.Assert(&Record{ID: "r1", Frame: "empirical", Content: "Finding", Timestamp: t0})
 	s.Believe(&Belief{ID: "b1", Frame: "empirical", Content: "Original", Confidence: 0.8, AssertedAt: t0, Derivation: []string{"r1"}})

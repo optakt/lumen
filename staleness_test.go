@@ -14,15 +14,15 @@ func setupStalenessStore(t *testing.T) (*Store, time.Time) {
 	// Frame with fast decay (1 day halflife) and mark_suspect policy.
 	s.RegisterFrame(Frame{
 		Name:              "fast-decay",
-		Composition:       "bayesian",
-		Decay:             DecayPolicy{Kind: "exponential", Halflife: 24 * time.Hour},
-		OnStaleDerivation: "mark_suspect",
+		Composition:       CompositionBayesian,
+		Decay:             DecayPolicy{Kind: DecayExponential, Halflife: 24 * time.Hour},
+		OnStaleDerivation: StaleMarkSuspect,
 	})
 	// Frame with no decay for the parent belief.
 	s.RegisterFrame(Frame{
 		Name:        "no-decay",
-		Composition: "bayesian",
-		Decay:       DecayPolicy{Kind: "exponential", Halflife: 24 * time.Hour},
+		Composition: CompositionBayesian,
+		Decay:       DecayPolicy{Kind: DecayExponential, Halflife: 24 * time.Hour},
 	})
 
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -106,13 +106,13 @@ func TestOnStaleDeriversFailPolicy(t *testing.T) {
 	s := NewStore()
 	s.RegisterFrame(Frame{
 		Name:              "strict",
-		Composition:       "bayesian",
-		Decay:             DecayPolicy{Kind: "exponential", Halflife: 24 * time.Hour},
-		OnStaleDerivation: "fail",
+		Composition:       CompositionBayesian,
+		Decay:             DecayPolicy{Kind: DecayExponential, Halflife: 24 * time.Hour},
+		OnStaleDerivation: StaleFail,
 	})
 	s.RegisterFrame(Frame{
 		Name:  "base",
-		Decay: DecayPolicy{Kind: "exponential", Halflife: 24 * time.Hour},
+		Decay: DecayPolicy{Kind: DecayExponential, Halflife: 24 * time.Hour},
 	})
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	_ = s.Assert(&Record{ID: "r1", Content: "R.", Frame: "base", Timestamp: t0})
@@ -153,13 +153,13 @@ func TestOnStaleDeriversRetryMarksSuspect(t *testing.T) {
 	s := NewStore()
 	s.RegisterFrame(Frame{
 		Name:              "retry-frame",
-		Composition:       "bayesian",
-		Decay:             DecayPolicy{Kind: "exponential", Halflife: 24 * time.Hour},
-		OnStaleDerivation: "retry",
+		Composition:       CompositionBayesian,
+		Decay:             DecayPolicy{Kind: DecayExponential, Halflife: 24 * time.Hour},
+		OnStaleDerivation: StaleRetry,
 	})
 	s.RegisterFrame(Frame{
 		Name:  "source-frame",
-		Decay: DecayPolicy{Kind: "exponential", Halflife: 24 * time.Hour},
+		Decay: DecayPolicy{Kind: DecayExponential, Halflife: 24 * time.Hour},
 	})
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	_ = s.Assert(&Record{ID: "r1", Content: "R.", Frame: "source-frame", Timestamp: t0})

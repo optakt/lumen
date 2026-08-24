@@ -14,7 +14,7 @@ import (
 func setupRevisionStore(t *testing.T) (*Store, map[string]time.Time) {
 	t.Helper()
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "test", Decay: DecayPolicy{Kind: "none"}, Composition: "bayesian"})
+	s.RegisterFrame(Frame{Name: "test", Decay: DecayPolicy{Kind: DecayNone}, Composition: CompositionBayesian})
 
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	t1 := t0.Add(24 * time.Hour)

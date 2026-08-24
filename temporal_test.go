@@ -8,7 +8,7 @@ import (
 func TestTemporalBasic(t *testing.T) {
 	s := NewStore()
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	f := Frame{Name: "test", Decay: DecayPolicy{Kind: "none"}}
+	f := Frame{Name: "test", Decay: DecayPolicy{Kind: DecayNone}}
 	s.RegisterFrame(f)
 
 	// Assert records at known times
@@ -48,7 +48,7 @@ func TestTemporalBasic(t *testing.T) {
 func TestTemporalCounterfactual(t *testing.T) {
 	s := NewStore()
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	f := Frame{Name: "test", Decay: DecayPolicy{Kind: "none"}}
+	f := Frame{Name: "test", Decay: DecayPolicy{Kind: DecayNone}}
 	s.RegisterFrame(f)
 
 	// r1 → b1 → b2 (linear chain)
@@ -88,7 +88,7 @@ func TestTemporalCounterfactual(t *testing.T) {
 func TestTemporalWouldExistWithout(t *testing.T) {
 	s := NewStore()
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	f := Frame{Name: "test", Decay: DecayPolicy{Kind: "none"}}
+	f := Frame{Name: "test", Decay: DecayPolicy{Kind: DecayNone}}
 	s.RegisterFrame(f)
 
 	s.Assert(&Record{ID: "r1", Frame: "test", Content: "Finding", Timestamp: base})
@@ -105,7 +105,7 @@ func TestTemporalWouldExistWithout(t *testing.T) {
 func TestTemporalTimeline(t *testing.T) {
 	s := NewStore()
 	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	f := Frame{Name: "test", Decay: DecayPolicy{Kind: "none"}}
+	f := Frame{Name: "test", Decay: DecayPolicy{Kind: DecayNone}}
 	s.RegisterFrame(f)
 
 	s.Assert(&Record{ID: "r2", Frame: "test", Content: "Second", Timestamp: base.Add(2 * time.Hour)})

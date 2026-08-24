@@ -176,17 +176,17 @@ func (s *Store) ExportLM(now time.Time) string {
 				if f.OpaqueSource != "" { fmt.Fprintf(&b, "    source: %q\n", f.OpaqueSource) }
 				if f.Calibration != "" { fmt.Fprintf(&b, "    calibration: %s\n", f.Calibration) }
 				if f.OpaqueReason != "" { fmt.Fprintf(&b, "    opacity-reason: %q\n", f.OpaqueReason) }
-			} else if f.Composition != "" {
+			} else if f.Composition != CompositionBayesian {
 				fmt.Fprintf(&b, "    composition: %s\n", f.Composition)
 			}
 			switch f.Decay.Kind {
-			case "none", "":
+			case DecayNone:
 				fmt.Fprintf(&b, "    decay: none\n")
-			case "exponential":
+			case DecayExponential:
 				days := f.Decay.Halflife.Hours() / 24
 				fmt.Fprintf(&b, "    decay: exponential halflife: %.0fd\n", days)
 			}
-			if f.OnStaleDerivation != "" {
+			if f.OnStaleDerivation != StaleIgnore {
 				fmt.Fprintf(&b, "    on_stale_derivation: %s\n", f.OnStaleDerivation)
 			}
 			fmt.Fprintln(&b)

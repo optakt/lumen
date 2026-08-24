@@ -63,12 +63,12 @@ func TestExportLMRoundtrip(t *testing.T) {
 	// Export to .lm, re-parse, verify the same beliefs are present.
 	s := NewStore()
 	s.RegisterFrame(Frame{
-		Name: "philo", Decay: DecayPolicy{Kind: "none"},
+		Name: "philo", Decay: DecayPolicy{Kind: DecayNone},
 	})
 	s.RegisterFrame(Frame{
 		Name: "empirical",
-		Decay: DecayPolicy{Kind: "exponential", Halflife: 365 * 24 * time.Hour},
-		OnStaleDerivation: "mark_suspect",
+		Decay: DecayPolicy{Kind: DecayExponential, Halflife: 365 * 24 * time.Hour},
+		OnStaleDerivation: StaleMarkSuspect,
 	})
 
 	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -127,7 +127,7 @@ func TestExportLMRoundtrip(t *testing.T) {
 	s2.mu.RLock()
 	ef := s2.frames["empirical"]
 	s2.mu.RUnlock()
-	if ef.OnStaleDerivation != "mark_suspect" {
+	if ef.OnStaleDerivation != StaleMarkSuspect {
 		t.Errorf("OnStaleDerivation: got %q, want mark_suspect", ef.OnStaleDerivation)
 	}
 	// Verify named query survived export/import.

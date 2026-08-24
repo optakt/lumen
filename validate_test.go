@@ -7,7 +7,7 @@ import (
 
 func TestValidateCleanStore(t *testing.T) {
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: DecayNone}})
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	_ = s.Assert(&Record{ID: "r1", Frame: "f", Content: "A.", Timestamp: t0})
 	_ = s.Believe(&Belief{ID: "b1", Frame: "f", Content: "B.", Confidence: 0.80, AssertedAt: t0, Derivation: []string{"r1"}})
@@ -20,7 +20,7 @@ func TestValidateCleanStore(t *testing.T) {
 
 func TestValidateOrphanedReference(t *testing.T) {
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: DecayNone}})
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	// Inject directly — Believe rejects bad references at insertion time.
 	s.beliefs["b1"] = &Belief{ID: "b1", Frame: "f", Content: "B.", Confidence: 0.80, AssertedAt: t0, Derivation: []string{"nonexistent"}}
@@ -49,7 +49,7 @@ func TestValidateUndefinedFrame(t *testing.T) {
 
 func TestValidateCircularDerivation(t *testing.T) {
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: DecayNone}})
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	// Inject circular reference directly (bypassing normal Believe validation).
 	s.beliefs["b1"] = &Belief{ID: "b1", Frame: "f", Content: "A.", Confidence: 0.80, AssertedAt: t0, Derivation: []string{"b2"}}

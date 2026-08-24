@@ -10,9 +10,9 @@ func setupQueryStore(t *testing.T) (*Store, time.Time) {
 	t.Helper()
 	s := NewStore()
 	now := time.Now()
-	s.RegisterFrame(Frame{Name: "philosophical", Decay: DecayPolicy{Kind: "none"}})
-	s.RegisterFrame(Frame{Name: "empirical",     Decay: DecayPolicy{Kind: "none"}})
-	s.RegisterFrame(Frame{Name: "reasoning",     Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "philosophical", Decay: DecayPolicy{Kind: DecayNone}})
+	s.RegisterFrame(Frame{Name: "empirical",     Decay: DecayPolicy{Kind: DecayNone}})
+	s.RegisterFrame(Frame{Name: "reasoning",     Decay: DecayPolicy{Kind: DecayNone}})
 
 	s.Assert(&Record{ID: "r1", Frame: "empirical", Content: "Cogitate study", Timestamp: now})
 	s.Assert(&Record{ID: "r2", Frame: "philosophical", Content: "Chalmers 1995", Timestamp: now})

@@ -89,7 +89,7 @@ func TestCounterfactualConfidence(t *testing.T) {
 	// Use a belief chain: r1 → b-empirical (conf 0.60) → b-top (conf 0.80).
 	// Excluding b-empirical from b-top should reveal how load-bearing it is.
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "empirical", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "empirical", Decay: DecayPolicy{Kind: DecayNone}})
 	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	_ = s.Assert(&Record{ID: "r1", Frame: "empirical", Content: "base record", Timestamp: now})

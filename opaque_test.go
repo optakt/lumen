@@ -121,7 +121,7 @@ func TestBelieveComposedBlockedForOpaque(t *testing.T) {
 	s := NewStore()
 	s.RegisterFrame(Frame{
 		Name:        "opaque-f",
-		Composition: "opaque",
+		Composition: CompositionOpaque,
 		Opaque:      true,
 		Calibration: "isotonic",
 	})
@@ -152,17 +152,17 @@ func TestBelieveComposedBlockedForOpaque(t *testing.T) {
 }
 
 func TestIsOpaqueViaCompositionString(t *testing.T) {
-	// Frame.IsOpaque() should return true when Composition=="opaque"
+	// Frame.IsOpaque() should return true when Composition==CompositionOpaque
 	// even without the Opaque bool field set.
-	f := Frame{Name: "test", Composition: "opaque"}
+	f := Frame{Name: "test", Composition: CompositionOpaque}
 	if !f.IsOpaque() {
 		t.Error("Frame with Composition='opaque' should be opaque")
 	}
-	f2 := Frame{Name: "test2", Composition: "bayesian"}
+	f2 := Frame{Name: "test2", Composition: CompositionBayesian}
 	if f2.IsOpaque() {
 		t.Error("Frame with Composition='bayesian' should not be opaque")
 	}
-	f3 := Frame{Name: "test3", Opaque: true, Composition: "bayesian"}
+	f3 := Frame{Name: "test3", Opaque: true, Composition: CompositionBayesian}
 	if !f3.IsOpaque() {
 		t.Error("Frame with Opaque=true should be opaque regardless of Composition")
 	}
@@ -172,12 +172,12 @@ func TestOpaqueExplainMentionsOpacity(t *testing.T) {
 	s := NewStore()
 	s.RegisterFrame(Frame{
 		Name:         "neural-dx",
-		Composition:  "opaque",
+		Composition:  CompositionOpaque,
 		Opaque:       true,
 		Calibration:  "isotonic",
 		OpaqueSource: "cardiac_v3",
 		OpaqueReason: "weights not individually addressable",
-		Decay:        DecayPolicy{Kind: "none"},
+		Decay:        DecayPolicy{Kind: DecayNone},
 	})
 	now := time.Now()
 	_ = s.Assert(&Record{ID: "r1", Content: "Model output.", Frame: "neural-dx", Timestamp: now})

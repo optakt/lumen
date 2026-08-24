@@ -9,7 +9,7 @@ import (
 func TestCorrelationAwareMerge(t *testing.T) {
 	s := NewStore()
 	now := time.Now()
-	s.RegisterFrame(Frame{Name: "empirical", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "empirical", Decay: DecayPolicy{Kind: DecayNone}})
 
 	// CASE 1: Independent sources — should approach standard noisy-or
 	s.Assert(&Record{ID: "r1", Frame: "empirical", Content: "Cogitate study", Timestamp: now})
@@ -52,7 +52,7 @@ func TestCorrelationAwareMerge(t *testing.T) {
 func TestDerivationOverlap(t *testing.T) {
 	s := NewStore()
 	now := time.Now()
-	s.RegisterFrame(Frame{Name: "empirical", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "empirical", Decay: DecayPolicy{Kind: DecayNone}})
 
 	s.Assert(&Record{ID: "r1", Frame: "empirical", Content: "Shared source", Timestamp: now})
 	s.Assert(&Record{ID: "r2", Frame: "empirical", Content: "Unique to A", Timestamp: now})

@@ -12,7 +12,7 @@ import (
 func buildBenchStore(b *testing.B, n int) (*Store, time.Time) {
 	b.Helper()
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "bench", Decay: DecayPolicy{Kind: "exponential", Halflife: 365 * 24 * time.Hour}})
+	s.RegisterFrame(Frame{Name: "bench", Decay: DecayPolicy{Kind: DecayExponential, Halflife: 365 * 24 * time.Hour}})
 	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	if err := s.Assert(&Record{ID: "r0", Content: "Base record.", Frame: "bench", Timestamp: now}); err != nil {
@@ -46,7 +46,7 @@ func buildBenchStore(b *testing.B, n int) (*Store, time.Time) {
 func buildWideStore(b *testing.B, n int) (*Store, time.Time) {
 	b.Helper()
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "bench", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "bench", Decay: DecayPolicy{Kind: DecayNone}})
 	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	if err := s.Assert(&Record{ID: "r0", Content: "Shared base.", Frame: "bench", Timestamp: now}); err != nil {

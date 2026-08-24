@@ -15,7 +15,7 @@ import (
 func setupRecoveryStore(t *testing.T) (*Store, time.Time) {
 	t.Helper()
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "test", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "test", Decay: DecayPolicy{Kind: DecayNone}})
 	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	must := func(err error) {
@@ -117,7 +117,7 @@ func TestRecoverAfterContraction(t *testing.T) {
 
 func TestRecoverNonContractedBelief(t *testing.T) {
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "test", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "test", Decay: DecayPolicy{Kind: DecayNone}})
 	now := time.Now()
 	_ = s.Assert(&Record{ID: "r1", Content: "R.", Frame: "test", Timestamp: now})
 	_ = s.Believe(&Belief{ID: "b1", Content: "B.", Confidence: 0.80, Frame: "test", AssertedAt: now, Derivation: []string{"r1"}})
@@ -159,7 +159,7 @@ func TestPostulateAuditK5(t *testing.T) {
 
 func TestContractedBeliefsEmpty(t *testing.T) {
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: DecayNone}})
 	now := time.Now()
 	_ = s.Assert(&Record{ID: "r1", Content: "R.", Frame: "f", Timestamp: now})
 	_ = s.Believe(&Belief{ID: "b1", Content: "B.", Confidence: 0.80, Frame: "f", AssertedAt: now, Derivation: []string{"r1"}})

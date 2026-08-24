@@ -9,7 +9,7 @@ import (
 func TestExplainBasic(t *testing.T) {
 	s := NewStore()
 	now := time.Now()
-	f := Frame{Name: "empirical", Decay: DecayPolicy{Kind: "exponential", Halflife: 30 * 24 * time.Hour}}
+	f := Frame{Name: "empirical", Decay: DecayPolicy{Kind: DecayExponential, Halflife: 30 * 24 * time.Hour}}
 	s.RegisterFrame(f)
 
 	s.Assert(&Record{ID: "cogitate-2023", Frame: "empirical", Content: "The Cogitate Consortium found GWT and IIT predictions unconfirmed.", Timestamp: now.Add(-365 * 24 * time.Hour)})
@@ -42,7 +42,7 @@ func TestExplainBasic(t *testing.T) {
 func TestExplainSuspect(t *testing.T) {
 	s := NewStore()
 	now := time.Now()
-	f := Frame{Name: "test", Decay: DecayPolicy{Kind: "none"}}
+	f := Frame{Name: "test", Decay: DecayPolicy{Kind: DecayNone}}
 	s.RegisterFrame(f)
 
 	s.Assert(&Record{ID: "r1", Frame: "test", Content: "Flawed experiment", Timestamp: now})
@@ -64,7 +64,7 @@ func TestExplainSuspect(t *testing.T) {
 func TestExplainTimeless(t *testing.T) {
 	s := NewStore()
 	now := time.Now()
-	f := Frame{Name: "philosophical", Decay: DecayPolicy{Kind: "none"}}
+	f := Frame{Name: "philosophical", Decay: DecayPolicy{Kind: DecayNone}}
 	s.RegisterFrame(f)
 
 	s.Assert(&Record{ID: "chalmers-1995", Frame: "philosophical", Content: "Chalmers introduced the hard problem in 1995.", Timestamp: now.Add(-31 * 365 * 24 * time.Hour)})

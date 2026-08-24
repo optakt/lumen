@@ -8,8 +8,8 @@ import (
 
 func TestSummarize(t *testing.T) {
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "f1", Decay: DecayPolicy{Kind: "none"}})
-	s.RegisterFrame(Frame{Name: "f2", Decay: DecayPolicy{Kind: "exponential", Halflife: 365 * 24 * time.Hour}})
+	s.RegisterFrame(Frame{Name: "f1", Decay: DecayPolicy{Kind: DecayNone}})
+	s.RegisterFrame(Frame{Name: "f2", Decay: DecayPolicy{Kind: DecayExponential, Halflife: 365 * 24 * time.Hour}})
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	_ = s.Assert(&Record{ID: "r1", Frame: "f1", Content: "R1.", Timestamp: t0})

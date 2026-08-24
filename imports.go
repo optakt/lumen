@@ -61,11 +61,32 @@ func LoadFileWithImports(path string, store *Store, now time.Time) error {
 
 // loadParsed populates a store from a fully resolved ParseResult.
 // Extracted from LoadFile so both code paths share the same logic.
+
+// parseCompositionMode converts a parsed string to CompositionMode.
+// Unknown values default to CompositionBayesian.
+func parseCompositionMode(s string) CompositionMode {
+	m, err := ParseCompositionMode(s)
+	if err != nil {
+		return CompositionBayesian
+	}
+	return m
+}
+
+// parseStaleAction converts a parsed string to StaleAction.
+// Unknown values default to StaleIgnore.
+func parseStaleAction(s string) StaleAction {
+	a, err := ParseStaleAction(s)
+	if err != nil {
+		return StaleIgnore
+	}
+	return a
+}
+
 func loadParsed(result *ParseResult, store *Store, now time.Time) error {
 	for _, pf := range result.Frames {
 		store.RegisterFrame(Frame{
 			Name:                pf.Name,
-			Composition:         pf.Composition,
+			Composition:         parseCompositionMode(pf.Composition),
 			Decay:               pf.Decay,
 			ProvenanceDepth:     pf.ProvenanceDepth,
 			ImportedDecayPolicy: pf.ImportedDecayPolicy,
@@ -73,7 +94,7 @@ func loadParsed(result *ParseResult, store *Store, now time.Time) error {
 			OpaqueSource:        pf.OpaqueSource,
 			OpaqueReason:        pf.OpaqueReason,
 			Calibration:         pf.Calibration,
-			OnStaleDerivation:   pf.OnStaleDerivation,
+			OnStaleDerivation:   parseStaleAction(pf.OnStaleDerivation),
 		})
 	}
 	for _, pb := range result.Bridges {

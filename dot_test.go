@@ -8,7 +8,7 @@ import (
 
 func TestExportDot(t *testing.T) {
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: DecayNone}})
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	_ = s.Assert(&Record{ID: "r1", Frame: "f", Content: "Root record.", Timestamp: t0})
@@ -33,7 +33,7 @@ func TestExportDot(t *testing.T) {
 
 func TestDotSuspectBorder(t *testing.T) {
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: DecayNone}})
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	_ = s.Assert(&Record{ID: "r1", Frame: "f", Content: "Root.", Timestamp: t0})

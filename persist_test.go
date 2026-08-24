@@ -11,8 +11,8 @@ func TestSaveAndLoadStore(t *testing.T) {
 	s := NewStore()
 	now := time.Date(2026, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	s.RegisterFrame(Frame{Name: "empirical", Decay: DecayPolicy{Kind: "exponential", Halflife: 5 * 365 * 24 * time.Hour}})
-	s.RegisterFrame(Frame{Name: "philosophical", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "empirical", Decay: DecayPolicy{Kind: DecayExponential, Halflife: 5 * 365 * 24 * time.Hour}})
+	s.RegisterFrame(Frame{Name: "philosophical", Decay: DecayPolicy{Kind: DecayNone}})
 
 	s.Assert(&Record{ID: "r1", Frame: "empirical", Content: "The Cogitate study found IIT predictions unconfirmed.", Timestamp: now.AddDate(-1, 0, 0)})
 	s.Assert(&Record{ID: "r2", Frame: "philosophical", Content: "Chalmers introduced the hard problem in 1995.", Timestamp: now.AddDate(-2, 0, 0)})
@@ -71,7 +71,7 @@ func TestSaveAndLoadStore(t *testing.T) {
 func TestRoundtripRetractedRecord(t *testing.T) {
 	s := NewStore()
 	now := time.Now()
-	s.RegisterFrame(Frame{Name: "test", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "test", Decay: DecayPolicy{Kind: DecayNone}})
 	s.Assert(&Record{ID: "r1", Frame: "test", Content: "Flawed finding", Timestamp: now})
 	s.Believe(&Belief{ID: "b1", Frame: "test", Content: "Conclusion", Confidence: 0.8, AssertedAt: now, Derivation: []string{"r1"}})
 	s.Retract("r1", "methodology error", now)
@@ -118,8 +118,8 @@ func TestPersistNewFields(t *testing.T) {
 	// Frame with OnStaleDerivation set.
 	s.RegisterFrame(Frame{
 		Name:              "monitored",
-		Decay:             DecayPolicy{Kind: "exponential", Halflife: 90 * 24 * time.Hour},
-		OnStaleDerivation: "mark_suspect",
+		Decay:             DecayPolicy{Kind: DecayExponential, Halflife: 90 * 24 * time.Hour},
+		OnStaleDerivation: StaleMarkSuspect,
 	})
 
 	// Foundational record.
@@ -168,7 +168,7 @@ func TestPersistNewFields(t *testing.T) {
 	s2.mu.RLock()
 	frame := s2.frames["monitored"]
 	s2.mu.RUnlock()
-	if frame.OnStaleDerivation != "mark_suspect" {
+	if frame.OnStaleDerivation != StaleMarkSuspect {
 		t.Errorf("OnStaleDerivation: got %q, want mark_suspect", frame.OnStaleDerivation)
 	}
 

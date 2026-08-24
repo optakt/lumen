@@ -10,8 +10,8 @@ func setupProvenanceStore(t *testing.T) (*Store, time.Time) {
 	t.Helper()
 	s := NewStore()
 	now := time.Now()
-	s.RegisterFrame(Frame{Name: "empirical",     Decay: DecayPolicy{Kind: "none"}})
-	s.RegisterFrame(Frame{Name: "philosophical", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "empirical",     Decay: DecayPolicy{Kind: DecayNone}})
+	s.RegisterFrame(Frame{Name: "philosophical", Decay: DecayPolicy{Kind: DecayNone}})
 
 	// Chain: r1 → b1 → b3
 	//        r2 → b2 → b3
@@ -193,7 +193,7 @@ func TestFoundationalNotWeakLink(t *testing.T) {
 	// When the only records in a chain are foundational, WeakestLink returns nil
 	// because foundational nodes are excluded — they are not fragile.
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: DecayNone}})
 	now := time.Now()
 
 	must := func(err error) {

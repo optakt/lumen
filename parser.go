@@ -239,7 +239,7 @@ func (p *Parser) parseFrame() (ParsedFrame, error) {
 		return ParsedFrame{}, fmt.Errorf("frame name: %w", err)
 	}
 	f := ParsedFrame{
-		Name: name.Value, Composition: "bayesian",
+		Name: name.Value, Composition: "",
 		ProvenanceDepth: 3, ImportedDecayPolicy: "most_conservative",
 	}
 
@@ -330,7 +330,7 @@ func (p *Parser) parseFrame() (ParsedFrame, error) {
 func (p *Parser) parseDecayArgs(kind string) (DecayPolicy, error) {
 	switch kind {
 	case "none":
-		return DecayPolicy{Kind: "none"}, nil
+		return DecayPolicy{Kind: DecayNone}, nil
 	case "exponential":
 		// "halflife" ":" duration
 		if err := p.expectIdent("halflife"); err != nil {
@@ -343,7 +343,7 @@ func (p *Parser) parseDecayArgs(kind string) (DecayPolicy, error) {
 		if err != nil {
 			return DecayPolicy{}, err
 		}
-		return DecayPolicy{Kind: "exponential", Halflife: dur}, nil
+		return DecayPolicy{Kind: DecayExponential, Halflife: dur}, nil
 	case "linear":
 		if err := p.expectIdent("rate"); err != nil {
 			return DecayPolicy{}, err
@@ -356,7 +356,7 @@ func (p *Parser) parseDecayArgs(kind string) (DecayPolicy, error) {
 			return DecayPolicy{}, err
 		}
 		rate, _ := strconv.ParseFloat(val.Value, 64)
-		return DecayPolicy{Kind: "linear", Rate: rate}, nil
+		return DecayPolicy{Kind: DecayLinear, Rate: rate}, nil
 	default:
 		return DecayPolicy{}, fmt.Errorf("unknown decay kind %q", kind)
 	}

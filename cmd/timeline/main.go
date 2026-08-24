@@ -29,11 +29,11 @@ func main() {
 	now := time.Now()
 	store := lumen.NewStore()
 	for _, f := range []lumen.Frame{
-		{Name: "philosophical", Decay: lumen.DecayPolicy{Kind: "none"}},
-		{Name: "empirical",     Decay: lumen.DecayPolicy{Kind: "exponential", Halflife: 5 * 365 * 24 * time.Hour}},
-		{Name: "contemporary",  Decay: lumen.DecayPolicy{Kind: "exponential", Halflife: 10 * 365 * 24 * time.Hour}},
-		{Name: "reasoning",     Decay: lumen.DecayPolicy{Kind: "none"}},
-		{Name: "test",          Decay: lumen.DecayPolicy{Kind: "none"}},
+		{Name: "philosophical", Decay: lumen.DecayPolicy{Kind: lumen.DecayNone}},
+		{Name: "empirical",     Decay: lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: 5 * 365 * 24 * time.Hour}},
+		{Name: "contemporary",  Decay: lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: 10 * 365 * 24 * time.Hour}},
+		{Name: "reasoning",     Decay: lumen.DecayPolicy{Kind: lumen.DecayNone}},
+		{Name: "test",          Decay: lumen.DecayPolicy{Kind: lumen.DecayNone}},
 	} {
 		store.RegisterFrame(f)
 	}

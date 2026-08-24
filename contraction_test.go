@@ -9,7 +9,7 @@ func setupContractionStore(t *testing.T) (*Store, time.Time) {
 	t.Helper()
 	s := NewStore()
 	now := time.Now()
-	f := Frame{Name: "test", Decay: DecayPolicy{Kind: "none"}}
+	f := Frame{Name: "test", Decay: DecayPolicy{Kind: DecayNone}}
 	s.RegisterFrame(f)
 
 	// Record graph:
@@ -165,7 +165,7 @@ func TestContractionChain(t *testing.T) {
 	// Deep chain: r → b1 → b2 → b3, all must be removed
 	s := NewStore()
 	now := time.Now()
-	f := Frame{Name: "test", Decay: DecayPolicy{Kind: "none"}}
+	f := Frame{Name: "test", Decay: DecayPolicy{Kind: DecayNone}}
 	s.RegisterFrame(f)
 
 	s.Assert(&Record{ID: "r", Frame: "test", Content: "Root record", Timestamp: now})
@@ -218,7 +218,7 @@ func TestContractionDiamond(t *testing.T) {
 	// A single-pass scan would miss b3 if b1/b2 are processed after it.
 	s := NewStore()
 	now := time.Now()
-	s.RegisterFrame(Frame{Name: "test", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "test", Decay: DecayPolicy{Kind: DecayNone}})
 
 	s.Assert(&Record{ID: "r1", Frame: "test", Content: "The only source", Timestamp: now})
 	s.Believe(&Belief{ID: "b1", Frame: "test", Content: "From r1 path A", Confidence: 0.8, AssertedAt: now, Derivation: []string{"r1"}})
@@ -249,7 +249,7 @@ func TestContractionDiamondWithCleanPath(t *testing.T) {
 	// b2 has r2 as a clean path, so b2 and b3 should be preserved.
 	s := NewStore()
 	now := time.Now()
-	s.RegisterFrame(Frame{Name: "test", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "test", Decay: DecayPolicy{Kind: DecayNone}})
 
 	s.Assert(&Record{ID: "r1", Frame: "test", Content: "Retracted source", Timestamp: now})
 	s.Assert(&Record{ID: "r2", Frame: "test", Content: "Clean source", Timestamp: now})
