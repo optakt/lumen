@@ -11,7 +11,7 @@ import (
 // Graph edges, and markSuspect reads only the Graph.
 func TestBelieveComposedRetractCascade(t *testing.T) {
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: DecayNone}})
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	_ = s.Assert(&Record{ID: "r1", Frame: "f", Content: "Evidence.", Timestamp: t0})
@@ -42,7 +42,7 @@ func TestBelieveComposedRetractCascade(t *testing.T) {
 // symmetrically: Believe rejects record IDs, Assert must reject belief IDs.
 func TestAssertRejectsBeliefIDCollision(t *testing.T) {
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: DecayNone}})
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	_ = s.Believe(&Belief{ID: "x", Frame: "f", Content: "B.", Confidence: 0.5, AssertedAt: t0})
@@ -57,8 +57,8 @@ func TestAssertRejectsBeliefIDCollision(t *testing.T) {
 // belief toward zero — the retrodiction problem re-entering via ReAssert.
 func TestReAssertRefreshesCrossFrameSnapshot(t *testing.T) {
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "stable", Decay: DecayPolicy{Kind: "none"}})
-	s.RegisterFrame(Frame{Name: "fast", Decay: DecayPolicy{Kind: "exponential", Halflife: 7 * 24 * time.Hour}})
+	s.RegisterFrame(Frame{Name: "stable", Decay: DecayPolicy{Kind: DecayNone}})
+	s.RegisterFrame(Frame{Name: "fast", Decay: DecayPolicy{Kind: DecayExponential, Halflife: 7 * 24 * time.Hour}})
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	_ = s.Assert(&Record{ID: "r1", Frame: "stable", Content: "Root.", Timestamp: t0})
@@ -89,7 +89,7 @@ func TestReAssertRefreshesCrossFrameSnapshot(t *testing.T) {
 // dead survives contraction with no live evidence.
 func TestContractionDeadSourceNotClean(t *testing.T) {
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: DecayNone}})
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	_ = s.Assert(&Record{ID: "r1", Frame: "f", Content: "Live evidence.", Timestamp: t0})
@@ -122,7 +122,7 @@ func TestContractionDeadSourceNotClean(t *testing.T) {
 // folded into a merged belief, not epistemically removed.
 func TestContractionMergedSourceStillClean(t *testing.T) {
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: DecayNone}})
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	_ = s.Assert(&Record{ID: "r1", Frame: "f", Content: "A.", Timestamp: t0})

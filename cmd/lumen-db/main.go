@@ -56,10 +56,10 @@ func shellSplit(s string) []string {
 }
 
 var defaultFrames = []lumen.Frame{
-	{Name: "philosophical", Decay: lumen.DecayPolicy{Kind: "none"}},
-	{Name: "empirical",     Decay: lumen.DecayPolicy{Kind: "exponential", Halflife: 5 * 365 * 24 * time.Hour}},
-	{Name: "contemporary",  Decay: lumen.DecayPolicy{Kind: "exponential", Halflife: 10 * 365 * 24 * time.Hour}},
-	{Name: "reasoning",     Decay: lumen.DecayPolicy{Kind: "none"}},
+	{Name: "philosophical", Decay: lumen.DecayPolicy{Kind: lumen.DecayNone}},
+	{Name: "empirical",     Decay: lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: 5 * 365 * 24 * time.Hour}},
+	{Name: "contemporary",  Decay: lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: 10 * 365 * 24 * time.Hour}},
+	{Name: "reasoning",     Decay: lumen.DecayPolicy{Kind: lumen.DecayNone}},
 }
 
 func main() {

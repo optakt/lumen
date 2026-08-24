@@ -9,7 +9,7 @@ import (
 func TestMergeBeliefs(t *testing.T) {
 	s := NewStore()
 	now := time.Now()
-	s.RegisterFrame(Frame{Name: "empirical", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "empirical", Decay: DecayPolicy{Kind: DecayNone}})
 
 	s.Assert(&Record{ID: "r1", Frame: "empirical", Content: "Cogitate study", Timestamp: now})
 	s.Assert(&Record{ID: "r2", Frame: "empirical", Content: "Independent replication", Timestamp: now})
@@ -78,7 +78,7 @@ func TestMergeCombinationMethods(t *testing.T) {
 func TestMergeWithRetire(t *testing.T) {
 	s := NewStore()
 	now := time.Now()
-	s.RegisterFrame(Frame{Name: "test", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "test", Decay: DecayPolicy{Kind: DecayNone}})
 
 	s.Assert(&Record{ID: "r1", Frame: "test", Content: "Source A", Timestamp: now})
 	s.Assert(&Record{ID: "r2", Frame: "test", Content: "Source B", Timestamp: now})

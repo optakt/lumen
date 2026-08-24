@@ -9,7 +9,7 @@ func TestFragilityScan(t *testing.T) {
 	s := NewStore()
 	s.RegisterFrame(Frame{
 		Name:  "f",
-		Decay: DecayPolicy{Kind: "exponential", Halflife: 365 * 24 * time.Hour},
+		Decay: DecayPolicy{Kind: DecayExponential, Halflife: 365 * 24 * time.Hour},
 	})
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
@@ -43,7 +43,7 @@ func TestFragilityScan(t *testing.T) {
 
 func TestFragilityScanIgnoresSuperseded(t *testing.T) {
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "f", Decay: DecayPolicy{Kind: DecayNone}})
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	_ = s.Assert(&Record{ID: "r1", Frame: "f", Content: "A.", Timestamp: t0})

@@ -9,8 +9,8 @@ func setupSearchStore(t *testing.T) (*Store, time.Time) {
 	t.Helper()
 	s := NewStore()
 	now := time.Now()
-	s.RegisterFrame(Frame{Name: "empirical", Decay: DecayPolicy{Kind: "none"}})
-	s.RegisterFrame(Frame{Name: "philosophical", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "empirical", Decay: DecayPolicy{Kind: DecayNone}})
+	s.RegisterFrame(Frame{Name: "philosophical", Decay: DecayPolicy{Kind: DecayNone}})
 
 	s.Assert(&Record{ID: "r1", Frame: "empirical", Content: "The Cogitate Consortium adversarial collaboration found IIT predictions unconfirmed.", Timestamp: now})
 	s.Assert(&Record{ID: "r2", Frame: "philosophical", Content: "Chalmers introduced the hard problem of consciousness in 1995.", Timestamp: now})

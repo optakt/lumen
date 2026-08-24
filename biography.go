@@ -153,7 +153,7 @@ func (s *Store) EpistemicBiography(beliefID string, threshold float64, now time.
 	// --- Decay trajectory ---
 	// Sample the decayed confidence at regular intervals from AssertedAt to now.
 	// This shows the continuous effect of decay even when there are no revisions.
-	if frame.Decay.Kind != "" && frame.Decay.Kind != "none" {
+	if frame.Decay.Kind != DecayNone {
 		duration := now.Sub(bio.AssertedAt)
 		if duration > 0 {
 			// Use 10 sample points across the lifetime.

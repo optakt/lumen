@@ -136,7 +136,7 @@ func (s *Store) reflectUpdate(b *Belief, frame Frame, current float64, elapsed t
 		obs = append(obs, "belief is suspect: must recompute from corrected sources before using")
 		shouldUpdate = true
 	}
-	if elapsed > frame.Decay.Halflife*4 && frame.Decay.Kind != "none" {
+	if elapsed > frame.Decay.Halflife*4 && frame.Decay.Kind != DecayNone {
 		obs = append(obs, fmt.Sprintf("elapsed time (%v) is >4 halflives: evidence base likely stale", elapsed.Round(time.Hour)))
 		shouldUpdate = true
 	}

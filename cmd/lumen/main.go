@@ -23,24 +23,24 @@ var (
 func init() {
 	// Register default frames so the REPL works out of the box
 	for _, f := range []lumen.Frame{
-		{Name: "default", Composition: "bayesian",
-			Decay: lumen.DecayPolicy{Kind: "none"}, ProvenanceDepth: 3, ImportedDecayPolicy: "most_conservative"},
-		{Name: "medical", Composition: "bayesian",
-			Decay: lumen.DecayPolicy{Kind: "exponential", Halflife: 30 * 24 * time.Hour},
+		{Name: "default", Composition: lumen.CompositionBayesian,
+			Decay: lumen.DecayPolicy{Kind: lumen.DecayNone}, ProvenanceDepth: 3, ImportedDecayPolicy: "most_conservative"},
+		{Name: "medical", Composition: lumen.CompositionBayesian,
+			Decay: lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: 30 * 24 * time.Hour},
 			ProvenanceDepth: 4, ImportedDecayPolicy: "most_conservative"},
-		{Name: "sensor", Composition: "bayesian",
-			Decay: lumen.DecayPolicy{Kind: "exponential", Halflife: time.Hour},
+		{Name: "sensor", Composition: lumen.CompositionBayesian,
+			Decay: lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: time.Hour},
 			ProvenanceDepth: 2, ImportedDecayPolicy: "most_conservative"},
-		{Name: "empirical", Composition: "bayesian",
-			Decay: lumen.DecayPolicy{Kind: "exponential", Halflife: 10 * 365 * 24 * time.Hour},
+		{Name: "empirical", Composition: lumen.CompositionBayesian,
+			Decay: lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: 10 * 365 * 24 * time.Hour},
 			ProvenanceDepth: 5, ImportedDecayPolicy: "most_conservative"},
-		{Name: "philosophical", Composition: "bayesian",
-			Decay: lumen.DecayPolicy{Kind: "none"}, ProvenanceDepth: 5, ImportedDecayPolicy: "most_conservative"},
-		{Name: "theoretical", Composition: "bayesian",
-			Decay: lumen.DecayPolicy{Kind: "exponential", Halflife: 20 * 365 * 24 * time.Hour},
+		{Name: "philosophical", Composition: lumen.CompositionBayesian,
+			Decay: lumen.DecayPolicy{Kind: lumen.DecayNone}, ProvenanceDepth: 5, ImportedDecayPolicy: "most_conservative"},
+		{Name: "theoretical", Composition: lumen.CompositionBayesian,
+			Decay: lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: 20 * 365 * 24 * time.Hour},
 			ProvenanceDepth: 4, ImportedDecayPolicy: "most_conservative"},
-		{Name: "reasoning", Composition: "bayesian",
-			Decay: lumen.DecayPolicy{Kind: "none"}, ProvenanceDepth: 5, ImportedDecayPolicy: "most_conservative"},
+		{Name: "reasoning", Composition: lumen.CompositionBayesian,
+			Decay: lumen.DecayPolicy{Kind: lumen.DecayNone}, ProvenanceDepth: 5, ImportedDecayPolicy: "most_conservative"},
 	} {
 		store.RegisterFrame(f)
 	}

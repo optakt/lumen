@@ -8,7 +8,7 @@ import (
 func TestConflictDeclared(t *testing.T) {
 	s := NewStore()
 	now := time.Now()
-	f := Frame{Name: "philosophical", Decay: DecayPolicy{Kind: "none"}}
+	f := Frame{Name: "philosophical", Decay: DecayPolicy{Kind: DecayNone}}
 	s.RegisterFrame(f)
 
 	s.Assert(&Record{ID: "r1", Frame: "philosophical", Content: "Chalmers argues consciousness is irreducible", Timestamp: now})
@@ -45,7 +45,7 @@ func TestConflictDeclared(t *testing.T) {
 func TestConflictNegation(t *testing.T) {
 	s := NewStore()
 	now := time.Now()
-	f := Frame{Name: "empirical", Decay: DecayPolicy{Kind: "none"}}
+	f := Frame{Name: "empirical", Decay: DecayPolicy{Kind: DecayNone}}
 	s.RegisterFrame(f)
 
 	s.Assert(&Record{ID: "r1", Frame: "empirical", Content: "Study A confirms the hypothesis", Timestamp: now})
@@ -77,7 +77,7 @@ func TestConflictNoFalsePositives(t *testing.T) {
 	// Two beliefs about the same entity that don't conflict
 	s := NewStore()
 	now := time.Now()
-	f := Frame{Name: "empirical", Decay: DecayPolicy{Kind: "none"}}
+	f := Frame{Name: "empirical", Decay: DecayPolicy{Kind: DecayNone}}
 	s.RegisterFrame(f)
 
 	s.Assert(&Record{ID: "r1", Frame: "empirical", Content: "Gödel published his theorems in 1931", Timestamp: now})

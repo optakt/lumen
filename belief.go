@@ -14,7 +14,7 @@ type Provenance struct {
 
 // DecayPolicy defines how a belief's confidence erodes over time.
 type DecayPolicy struct {
-	Kind     string        // "exponential", "linear", "step", "none"
+	Kind     DecayKind
 	Halflife time.Duration // for exponential
 	Rate     float64       // for linear (confidence units per day)
 	StepAt   time.Duration // for step: drops to StepTo after this duration
@@ -24,25 +24,25 @@ type DecayPolicy struct {
 // ApplyDecay returns the decayed confidence given elapsed time.
 func (d DecayPolicy) ApplyDecay(original float64, elapsed time.Duration) float64 {
 	switch d.Kind {
-	case "exponential":
+	case DecayExponential:
 		if d.Halflife <= 0 {
 			return original
 		}
 		halves := float64(elapsed) / float64(d.Halflife)
 		return original * pow2neg(halves)
-	case "linear":
+	case DecayLinear:
 		days := elapsed.Hours() / 24
 		decayed := original - d.Rate*days
 		if decayed < 0 {
 			return 0
 		}
 		return decayed
-	case "step":
+	case DecayStep:
 		if elapsed >= d.StepAt {
 			return d.StepTo
 		}
 		return original
-	case "none", "":
+	case DecayNone:
 		return original
 	}
 	return original
@@ -55,13 +55,13 @@ func pow2neg(x float64) float64 {
 // Frame declares the epistemological context for reasoning.
 type Frame struct {
 	Name                string
-	Composition         string // "bayesian", "dempster-shafer", "opaque"
+	Composition         CompositionMode
 	Decay               DecayPolicy
 	ProvenanceDepth     int
 	ImportedDecayPolicy string // "most_conservative", "most_permissive", "origin"
-	OnStaleDerivation   string // "retry", "mark_suspect", "fail"
+	OnStaleDerivation   StaleAction
 
-	// Opaque frame fields — set when Composition == "opaque".
+	// Opaque frame fields — set when Composition == CompositionOpaque.
 	// In an opaque frame, evidence cannot be decomposed into individual records
 	// with likelihood ratios. The frame's calibration provides aggregate trust.
 	Opaque       bool   // true when composition is "opaque"
@@ -73,7 +73,7 @@ type Frame struct {
 // IsOpaque reports whether the frame forbids evidence decomposition.
 // Bayesian composition and evidence blocks are not available in opaque frames.
 func (f Frame) IsOpaque() bool {
-	return f.Opaque || f.Composition == "opaque"
+	return f.Opaque || f.Composition == CompositionOpaque
 }
 
 // MostConservativeDecay returns the decay policy that erodes confidence fastest.

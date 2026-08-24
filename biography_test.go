@@ -111,7 +111,7 @@ func TestEpistemicBiographyRetractions(t *testing.T) {
 
 func TestEpistemicBiographyNoRevisions(t *testing.T) {
 	s := NewStore()
-	s.RegisterFrame(Frame{Name: "test", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "test", Decay: DecayPolicy{Kind: DecayNone}})
 	now := time.Now()
 	_ = s.Assert(&Record{ID: "r1", Content: "R1", Timestamp: now, Frame: "test"})
 	_ = s.Believe(&Belief{
@@ -195,7 +195,7 @@ func TestDecayTrajectory(t *testing.T) {
 	s := NewStore()
 	s.RegisterFrame(Frame{
 		Name:  "decaying",
-		Decay: DecayPolicy{Kind: "exponential", Halflife: 365 * 24 * time.Hour},
+		Decay: DecayPolicy{Kind: DecayExponential, Halflife: 365 * 24 * time.Hour},
 	})
 	t0 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	_ = s.Assert(&Record{ID: "r1", Frame: "decaying", Content: "A.", Timestamp: t0})

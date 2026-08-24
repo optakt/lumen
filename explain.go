@@ -86,9 +86,9 @@ func (s *Store) Explain(beliefID string, now time.Time) (string, error) {
 		goto afterDecay
 	}
 	switch frame.Decay.Kind {
-	case "none", "":
+	case DecayNone:
 		fmt.Fprintf(&w, ", which does not decay — this belief is treated as timeless.\n\n")
-	case "exponential":
+	case DecayExponential:
 		hl := frame.Decay.Halflife
 		hlDays := hl.Hours() / 24
 		decayFactor := b.ownDecayFactor(frame, now)
@@ -98,7 +98,7 @@ func (s *Store) Explain(beliefID string, now time.Time) (string, error) {
 		} else {
 			fmt.Fprintf(&w, " with an exponential decay halflife of %.0f days. The belief is fresh enough that decay has had negligible effect.\n\n", hlDays)
 		}
-	case "step":
+	case DecayStep:
 		fmt.Fprintf(&w, " with a step decay policy — confidence is held constant until a cutoff, then drops.\n\n")
 	default:
 		fmt.Fprintf(&w, ".\n\n")
@@ -209,7 +209,7 @@ func (s *Store) Explain(beliefID string, now time.Time) (string, error) {
 	if len(staleDerivers) > 0 {
 		fmt.Fprintf(&w, "**⚠ Stale source beliefs** (confidence < %.0f%%): %v\n",
 			StaleThreshold*100, staleDerivers)
-		if frame.OnStaleDerivation != "" {
+		if frame.OnStaleDerivation != StaleIgnore {
 			fmt.Fprintf(&w, "Frame policy %q applies — check source beliefs.\n", frame.OnStaleDerivation)
 		}
 		fmt.Fprintln(&w)
@@ -220,7 +220,7 @@ func (s *Store) Explain(beliefID string, now time.Time) (string, error) {
 	switch {
 	case state == BeliefSuspect:
 		fmt.Fprintf(&w, "resolving the retracted source — either by reasserting a corrected record or by applying contraction to remove dependent beliefs.")
-	case frame.Decay.Kind == "exponential":
+	case frame.Decay.Kind == DecayExponential:
 		fmt.Fprintf(&w, "new supporting evidence reasserted at current time (resetting the decay clock), or retraction of a source record.")
 	default:
 		fmt.Fprintf(&w, "retraction of a source record, or explicit revision of the declared confidence.")
@@ -239,13 +239,13 @@ func (s *Store) Explain(beliefID string, now time.Time) (string, error) {
 func (b *Belief) ownDecayFactor(frame Frame, now time.Time) float64 {
 	elapsed := now.Sub(b.AssertedAt)
 	switch frame.Decay.Kind {
-	case "exponential":
+	case DecayExponential:
 		if frame.Decay.Halflife <= 0 {
 			return 1.0
 		}
 		halflives := float64(elapsed) / float64(frame.Decay.Halflife)
 		return math.Exp(-halflives * math.Ln2)
-	case "step":
+	case DecayStep:
 		if frame.Decay.Halflife > 0 && elapsed > frame.Decay.Halflife {
 			return frame.Decay.StepTo
 		}

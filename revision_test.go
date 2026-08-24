@@ -8,7 +8,7 @@ import (
 func TestReviseBasic(t *testing.T) {
 	s := NewStore()
 	now := time.Now()
-	f := Frame{Name: "empirical", Decay: DecayPolicy{Kind: "none"}}
+	f := Frame{Name: "empirical", Decay: DecayPolicy{Kind: DecayNone}}
 	s.RegisterFrame(f)
 
 	s.Assert(&Record{ID: "r1", Frame: "empirical", Content: "Study found X causes Y with p=0.03", Timestamp: now})
@@ -52,7 +52,7 @@ func TestReviseBasic(t *testing.T) {
 func TestReviseAndReAssert(t *testing.T) {
 	s := NewStore()
 	now := time.Now()
-	f := Frame{Name: "empirical", Decay: DecayPolicy{Kind: "none"}}
+	f := Frame{Name: "empirical", Decay: DecayPolicy{Kind: DecayNone}}
 	s.RegisterFrame(f)
 
 	s.Assert(&Record{ID: "r1", Frame: "empirical", Content: "Original finding", Timestamp: now})
@@ -80,7 +80,7 @@ func TestReviseAGMVacuity(t *testing.T) {
 	// In Lumen terms: revising a record with no dependent beliefs produces no suspect beliefs
 	s := NewStore()
 	now := time.Now()
-	f := Frame{Name: "empirical", Decay: DecayPolicy{Kind: "none"}}
+	f := Frame{Name: "empirical", Decay: DecayPolicy{Kind: DecayNone}}
 	s.RegisterFrame(f)
 
 	s.Assert(&Record{ID: "r-solo", Frame: "empirical", Content: "Isolated record", Timestamp: now})

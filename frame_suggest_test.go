@@ -55,8 +55,8 @@ func TestSuggestFrameContemporary(t *testing.T) {
 func TestSuggestFrameForBelief(t *testing.T) {
 	s := NewStore()
 	now := time.Now()
-	s.RegisterFrame(Frame{Name: "empirical",     Decay: DecayPolicy{Kind: "none"}})
-	s.RegisterFrame(Frame{Name: "philosophical", Decay: DecayPolicy{Kind: "none"}})
+	s.RegisterFrame(Frame{Name: "empirical",     Decay: DecayPolicy{Kind: DecayNone}})
+	s.RegisterFrame(Frame{Name: "philosophical", Decay: DecayPolicy{Kind: DecayNone}})
 
 	s.Assert(&Record{ID: "r1", Frame: "empirical", Content: "Study found significant correlation", Timestamp: now})
 	s.Believe(&Belief{

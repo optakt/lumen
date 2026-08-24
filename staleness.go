@@ -44,7 +44,7 @@ func (s *Store) StaleDerivers(beliefID string, now time.Time) []string {
 //
 // The call acquires the store lock briefly — do not call while holding it.
 func (s *Store) applyOnStaleDerivation(beliefID string, frame Frame, now time.Time) error {
-	if frame.OnStaleDerivation == "" {
+	if frame.OnStaleDerivation == StaleIgnore {
 		return nil
 	}
 	stale := s.StaleDerivers(beliefID, now)
@@ -53,15 +53,15 @@ func (s *Store) applyOnStaleDerivation(beliefID string, frame Frame, now time.Ti
 	}
 
 	switch frame.OnStaleDerivation {
-	case "mark_suspect":
+	case StaleMarkSuspect:
 		s.mu.Lock()
 		if b, ok := s.beliefs[beliefID]; ok && b.State == BeliefActive {
 			b.State = BeliefSuspect
 		}
 		s.mu.Unlock()
-	case "fail":
+	case StaleFail:
 		return fmt.Errorf("belief %q has stale derivation sources %v and frame policy is 'fail'", beliefID, stale)
-	case "retry":
+	case StaleRetry:
 		// Mark suspect so the degraded state is visible; return an error so the
 		// caller knows re-assertion is needed. Future queries show BeliefSuspect
 		// rather than repeating the error until re-assertion occurs.

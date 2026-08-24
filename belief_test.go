@@ -8,21 +8,21 @@ import (
 
 var medicalFrame = Frame{
 	Name:        "medical_diagnosis",
-	Composition: "bayesian",
+	Composition: CompositionBayesian,
 	Decay: DecayPolicy{
-		Kind:     "exponential",
+		Kind:     DecayExponential,
 		Halflife: 30 * 24 * time.Hour, // 30 days
 	},
 	ProvenanceDepth:     3,
 	ImportedDecayPolicy: "most_conservative",
-	OnStaleDerivation:   "mark_suspect",
+	OnStaleDerivation:   StaleMarkSuspect,
 }
 
 var sensorFrame = Frame{
 	Name:        "sensor_fusion",
-	Composition: "bayesian",
+	Composition: CompositionBayesian,
 	Decay: DecayPolicy{
-		Kind:     "exponential",
+		Kind:     DecayExponential,
 		Halflife: 1 * time.Hour, // sensor readings decay fast
 	},
 	ProvenanceDepth:     2,
@@ -30,7 +30,7 @@ var sensorFrame = Frame{
 }
 
 func TestDecayExponential(t *testing.T) {
-	policy := DecayPolicy{Kind: "exponential", Halflife: 30 * 24 * time.Hour}
+	policy := DecayPolicy{Kind: DecayExponential, Halflife: 30 * 24 * time.Hour}
 	now := time.Now()
 
 	cases := []struct {
@@ -57,7 +57,7 @@ func TestDecayExponential(t *testing.T) {
 }
 
 func TestDecayLinear(t *testing.T) {
-	policy := DecayPolicy{Kind: "linear", Rate: 0.1} // loses 0.1 per day
+	policy := DecayPolicy{Kind: DecayLinear, Rate: 0.1} // loses 0.1 per day
 	cases := []struct {
 		elapsed time.Duration
 		want    float64
@@ -76,7 +76,7 @@ func TestDecayLinear(t *testing.T) {
 }
 
 func TestDecayStep(t *testing.T) {
-	policy := DecayPolicy{Kind: "step", StepAt: 7 * 24 * time.Hour, StepTo: 0.3}
+	policy := DecayPolicy{Kind: DecayStep, StepAt: 7 * 24 * time.Hour, StepTo: 0.3}
 	if got := policy.ApplyDecay(0.9, 6*24*time.Hour); got != 0.9 {
 		t.Errorf("before step: got %.2f want 0.9", got)
 	}
@@ -265,9 +265,9 @@ func ExampleStore() {
 	s := NewStore()
 	s.RegisterFrame(Frame{
 		Name:        "example",
-		Composition: "bayesian",
+		Composition: CompositionBayesian,
 		Decay: DecayPolicy{
-			Kind:     "exponential",
+			Kind:     DecayExponential,
 			Halflife: 7 * 24 * time.Hour,
 		},
 		ImportedDecayPolicy: "most_conservative",

@@ -84,11 +84,11 @@ func (s *Store) BeliefHealth(beliefID string, now time.Time) (*HealthScore, erro
 	default:
 		freshnessScore = 10
 	}
-	if frame.Decay.Kind == "none" {
+	if frame.Decay.Kind == DecayNone {
 		freshnessScore = 100 // timeless beliefs don't age
 	}
 	freshnessNote := fmt.Sprintf("asserted %.0f days ago", ageDays)
-	if frame.Decay.Kind == "none" { freshnessNote += " (timeless frame)" }
+	if frame.Decay.Kind == DecayNone { freshnessNote += " (timeless frame)" }
 	components = append(components, HealthComponent{"Freshness", freshnessScore, freshnessScore * 0.20, 0.20, freshnessNote})
 
 	// 3. Source depth (15%) — having sources is good; extremely deep chains slightly penalized
