@@ -37,6 +37,8 @@ func (e FragilityEntry) String() string {
 //
 // For beliefs with full Bayesian composition data the sensitivity analysis
 // gives a better answer; this function uses that path when available.
+type recSnap struct{ exists, retracted bool; conf float64 }
+
 func (s *Store) FragilityScan(now time.Time) []FragilityEntry {
 	s.mu.RLock()
 	type snap struct {
@@ -64,6 +66,18 @@ func (s *Store) FragilityScan(now time.Time) []FragilityEntry {
 			belief:     b,
 		})
 	}
+	// Snapshot record retraction states so fragEntryFor can run lock-free.
+	// use package-level recSnap type
+	records := make(map[string]recSnap, len(s.records))
+	for id, r := range s.records {
+		records[id] = recSnap{exists: true, retracted: r.Retracted}
+	}
+	// Snapshot belief confidences for source lookups.
+	beliefConf := make(map[string]float64, len(s.beliefs))
+	for id, b := range s.beliefs {
+		f := s.frames[b.Frame]
+		beliefConf[id] = b.CurrentConfidence(f, now)
+	}
 	s.mu.RUnlock()
 
 	var entries []FragilityEntry
@@ -71,7 +85,7 @@ func (s *Store) FragilityScan(now time.Time) []FragilityEntry {
 		if len(b.derivation) == 0 {
 			continue
 		}
-		entry := s.fragEntryFor(b.id, b.content, b.conf, b.derivation, b.frame, now, b.belief)
+		entry := s.fragEntryFor(b.id, b.content, b.conf, b.derivation, b.frame, now, b.belief, records, beliefConf)
 		if entry != nil {
 			entries = append(entries, *entry)
 		}
@@ -106,10 +120,13 @@ type sourceConf struct {
 //       estimated = NoisyOr(sources \ {k}) / NoisyOr(sources) * current
 //     Valid when confidence is monotonically proportional to source noisy-or and
 //     decay applies uniformly regardless of source composition (both hold in practice).
-func (s *Store) fragEntryFor(beliefID, content string, currentConf float64, derivation []string, frame Frame, now time.Time, b *Belief) *FragilityEntry {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
+// fragEntryFor computes the fragility entry for one belief.
+// records and beliefConf are pre-snapshotted from s.records and s.beliefs;
+// this function is safe to call without holding s.mu.
+func (s *Store) fragEntryFor(beliefID, content string, currentConf float64, derivation []string, frame Frame, now time.Time, b *Belief,
+	records map[string]recSnap,
+	beliefConf map[string]float64,
+) *FragilityEntry {
 	// Path 1: Bayesian-composed belief — use sensitivity analysis (exact).
 	//
 	// Scale consistency: SensitivityAnalysis computes posteriors in undecayed
@@ -170,15 +187,14 @@ func (s *Store) fragEntryFor(beliefID, content string, currentConf float64, deri
 	// Path 2: Derived belief — proportional decay approximation.
 	var sources []sourceConf
 	for _, srcID := range derivation {
-		if rec, ok := s.records[srcID]; ok {
+		if rec, ok := records[srcID]; ok {
 			c := 1.0
-			if rec.Retracted {
+			if rec.retracted {
 				c = 0
 			}
 			sources = append(sources, sourceConf{srcID, "record", c})
-		} else if src, ok := s.beliefs[srcID]; ok {
-			srcFrame := s.frames[src.Frame]
-			sources = append(sources, sourceConf{srcID, "belief", src.CurrentConfidence(srcFrame, now)})
+		} else if conf, ok := beliefConf[srcID]; ok {
+			sources = append(sources, sourceConf{srcID, "belief", conf})
 		}
 	}
 
