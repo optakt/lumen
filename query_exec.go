@@ -67,16 +67,20 @@ func (s *Store) ExecuteQuery(q ParsedQuery, now time.Time) (*ArchiveResult, erro
 		ExecutedAt: now,
 	}
 
-	// Parse since timestamp.
+	// Parse since timestamp. An unparseable value is an error, not a
+	// silently skipped filter.
 	var since time.Time
 	if q.Since != "" {
-		var parseErr error
+		parsed := false
 		for _, layout := range []string{time.RFC3339, "2006-01-02"} {
-			var t time.Time
-			if t, parseErr = time.Parse(layout, q.Since); parseErr == nil {
+			if t, err := time.Parse(layout, q.Since); err == nil {
 				since = t
+				parsed = true
 				break
 			}
+		}
+		if !parsed {
+			return nil, fmt.Errorf("query %s: since %q is not RFC3339 or YYYY-MM-DD", q.ID, q.Since)
 		}
 	}
 

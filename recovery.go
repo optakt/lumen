@@ -31,6 +31,13 @@ func (s *Store) Recover(beliefID string, now time.Time) error {
 	if b.State != BeliefSuperseded {
 		return fmt.Errorf("belief %q is not contracted (state: %s)", beliefID, stateToString(b.State))
 	}
+	// Merged/retired beliefs share BeliefSuperseded but have no contracting
+	// record. Recovery is K÷5 — it reverses contraction, not merging. Without
+	// this check a merged belief would be silently resurrected alongside the
+	// belief that superseded it.
+	if b.ContractedBy == "" {
+		return fmt.Errorf("belief %q was retired (merged), not contracted; recovery does not apply", beliefID)
+	}
 
 	// Check that the contracting record has been re-asserted.
 	if b.ContractedBy != "" {

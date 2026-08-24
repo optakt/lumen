@@ -185,6 +185,11 @@ func (s *Store) ExportLM(now time.Time) string {
 			case DecayExponential:
 				days := f.Decay.Halflife.Hours() / 24
 				fmt.Fprintf(&b, "    decay: exponential halflife: %.0fd\n", days)
+			case DecayLinear:
+				fmt.Fprintf(&b, "    decay: linear rate: %g\n", f.Decay.Rate)
+			case DecayStep:
+				days := f.Decay.StepAt.Hours() / 24
+				fmt.Fprintf(&b, "    decay: step at: %.0fd to: %g\n", days, f.Decay.StepTo)
 			}
 			if f.OnStaleDerivation != StaleIgnore {
 				fmt.Fprintf(&b, "    on_stale_derivation: %s\n", f.OnStaleDerivation)
@@ -237,12 +242,28 @@ func (s *Store) ExportLM(now time.Time) string {
 			if len(bel.Derivation) > 0 {
 				fmt.Fprintf(&b, "    from: %s\n", strings.Join(bel.Derivation, ", "))
 			}
+			// Composition metadata: without this, a composed belief round-trips
+			// as a plain belief and FragilityScan falls back to the approximation.
+			if len(bel.CompositionEvidence) > 0 {
+				fmt.Fprintf(&b, "    prior: [%.4f, %.4f]\n", bel.CompositionPrior, bel.CompositionPrior)
+				for _, ev := range bel.CompositionEvidence {
+					fmt.Fprintf(&b, "    evidence %s\n", ev.SourceID)
+					fmt.Fprintf(&b, "        lr: %g\n", ev.LikelihoodRatio)
+					fmt.Fprintf(&b, "        confidence: %.4f\n", ev.Confidence)
+				}
+			}
 			fmt.Fprintln(&b)
 		}
 	}
 
-	// Named queries sorted by ID.
-	all := s.AllQueries()
+	// Named queries sorted by ID. Collected inline: calling AllQueries()
+	// here would re-acquire s.mu.RLock while we already hold it — a latent
+	// deadlock when a writer is queued between the two acquisitions.
+	all := make([]ParsedQuery, 0, len(s.namedQueries))
+	for _, q := range s.namedQueries {
+		all = append(all, q)
+	}
+	sort.Slice(all, func(i, j int) bool { return all[i].ID < all[j].ID })
 	if len(all) > 0 {
 		for _, q := range all {
 			fmt.Fprintf(&b, "query %s\n", q.ID)

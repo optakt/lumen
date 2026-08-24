@@ -178,8 +178,13 @@ func (s *Store) FindMergeCandidates(threshold int, now time.Time) []MergeCandida
 		for j := i + 1; j < len(beliefs); j++ {
 			a, b := beliefs[i], beliefs[j]
 			if a.frame != b.frame { continue }
-			if a.state == BeliefSuspect || b.state == BeliefSuspect { continue }
-			// Content length within 2x
+			// Only active beliefs are merge candidates. Suspect beliefs have
+			// integrity problems; superseded beliefs were already merged or
+			// contracted — proposing them again loops forever.
+			if a.state != BeliefActive || b.state != BeliefActive { continue }
+			// Content length within 2x. Guard zero lengths: 0/0 is NaN, which
+			// passes both comparisons below and lets empty beliefs through.
+			if a.contentLen == 0 || b.contentLen == 0 { continue }
 			ratio := float64(a.contentLen) / float64(b.contentLen)
 			if ratio < 0.5 || ratio > 2.0 { continue }
 			// Entity co-mention

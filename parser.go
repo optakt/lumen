@@ -357,6 +357,31 @@ func (p *Parser) parseDecayArgs(kind string) (DecayPolicy, error) {
 		}
 		rate, _ := strconv.ParseFloat(val.Value, 64)
 		return DecayPolicy{Kind: DecayLinear, Rate: rate}, nil
+	case "step":
+		// "at" ":" duration "to" ":" float — confidence drops to the target
+		// value once the duration has elapsed since assertion.
+		if err := p.expectIdent("at"); err != nil {
+			return DecayPolicy{}, err
+		}
+		if _, err := p.expect(TokColon); err != nil {
+			return DecayPolicy{}, err
+		}
+		dur, err := p.parseDuration()
+		if err != nil {
+			return DecayPolicy{}, err
+		}
+		if err := p.expectIdent("to"); err != nil {
+			return DecayPolicy{}, err
+		}
+		if _, err := p.expect(TokColon); err != nil {
+			return DecayPolicy{}, err
+		}
+		val, err := p.expect(TokFloat)
+		if err != nil {
+			return DecayPolicy{}, err
+		}
+		to, _ := strconv.ParseFloat(val.Value, 64)
+		return DecayPolicy{Kind: DecayStep, StepAt: dur, StepTo: to}, nil
 	default:
 		return DecayPolicy{}, fmt.Errorf("unknown decay kind %q", kind)
 	}
@@ -515,49 +540,41 @@ func (p *Parser) parseBelief() (ParsedBelief, error) {
 					p.advance()
 				}
 			case "prior":
-				// Credal prior: prior: [0.35, 0.65]
+				// Prior: interval `prior: [0.35, 0.65]` or point `prior: 0.5`
+				// (a point prior is the degenerate interval [p, p]).
 				if _, err := p.expect(TokColon); err != nil {
 					return b, err
 				}
 				p.skipNewlines()
-				// Expect '[' lo ',' hi ']'
-				if _, err := p.expect(TokLBracket); err != nil {
-					return b, fmt.Errorf("prior: expected '['")
+				if p.cur().Kind == TokLBracket {
+					p.advance()
+					loTok := p.cur(); p.advance()
+					lo, err := strconv.ParseFloat(loTok.Value, 64)
+					if err != nil {
+						return b, fmt.Errorf("prior lo: %w", err)
+					}
+					if _, err := p.expect(TokComma); err != nil {
+						return b, fmt.Errorf("prior: expected ','")
+					}
+					hiTok := p.cur(); p.advance()
+					hi, err := strconv.ParseFloat(hiTok.Value, 64)
+					if err != nil {
+						return b, fmt.Errorf("prior hi: %w", err)
+					}
+					if _, err := p.expect(TokRBracket); err != nil {
+						return b, fmt.Errorf("prior: expected ']'")
+					}
+					b.HasCredalPrior = true
+					b.CredalPriorLo, b.CredalPriorHi = lo, hi
+				} else {
+					valTok := p.cur(); p.advance()
+					v, err := strconv.ParseFloat(valTok.Value, 64)
+					if err != nil {
+						return b, fmt.Errorf("prior: expected float or '[', got %q", valTok.Value)
+					}
+					b.HasCredalPrior = true
+					b.CredalPriorLo, b.CredalPriorHi = v, v
 				}
-				loTok := p.cur()
-				p.advance()
-				lo, err := strconv.ParseFloat(loTok.Value, 64)
-				if err != nil {
-					return b, fmt.Errorf("prior lo: %w", err)
-				}
-				if _, err := p.expect(TokComma); err != nil {
-					return b, fmt.Errorf("prior: expected ','")
-				}
-				hiTok := p.cur()
-				p.advance()
-				hi, err := strconv.ParseFloat(hiTok.Value, 64)
-				if err != nil {
-					return b, fmt.Errorf("prior hi: %w", err)
-				}
-				if _, err := p.expect(TokRBracket); err != nil {
-					return b, fmt.Errorf("prior: expected ']'")
-				}
-				b.HasCredalPrior = true
-				b.CredalPriorLo = lo
-				b.CredalPriorHi = hi
-			 case "decay":
-				if _, err := p.expect(TokColon); err != nil {
-					return b, err
-				}
-				kind, err := p.expect(TokIdent)
-				if err != nil {
-					return b, err
-				}
-				decay, err := p.parseDecayArgs(kind.Value)
-				if err != nil {
-					return b, fmt.Errorf("belief decay: %w", err)
-				}
-				b.DecayOverride = &decay
 			case "evidence":
 				// Inline credal evidence block: evidence <id> \n INDENT ... DEDENT
 				ev, err := p.parseInlineEvidence()
