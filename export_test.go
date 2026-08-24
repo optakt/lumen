@@ -146,3 +146,67 @@ func TestExportLMRoundtrip(t *testing.T) {
 	}
 	t.Log("ExportLM round-trip: all checks passed")
 }
+
+// TestExportLMComposedRoundtrip verifies that composition metadata
+// (prior + evidence) and non-exponential decay kinds survive a full
+// export → parse → load cycle. Before this, a composed belief silently
+// round-tripped as a plain belief and FragilityScan lost its exact path.
+func TestExportLMComposedRoundtrip(t *testing.T) {
+	s := NewStore()
+	now := time.Now()
+
+	s.RegisterFrame(Frame{Name: "reasoning", Decay: DecayPolicy{Kind: DecayNone}})
+	s.RegisterFrame(Frame{Name: "lin", Decay: DecayPolicy{Kind: DecayLinear, Rate: 0.01}})
+	s.RegisterFrame(Frame{Name: "st", Decay: DecayPolicy{Kind: DecayStep, StepAt: 30 * 24 * time.Hour, StepTo: 0.2}})
+
+	r1 := &Record{ID: "r-x", Frame: "reasoning", Content: "Evidence X", Timestamp: now}
+	if err := s.Assert(r1); err != nil { t.Fatal(err) }
+
+	b := &Belief{
+		ID: "b-composed", Content: "A composed claim", Confidence: 0.8,
+		Frame: "reasoning", AssertedAt: now, Derivation: []string{"r-x"},
+	}
+	evidence := []Evidence{{SourceID: "r-x", Confidence: 0.8, LikelihoodRatio: 3.0}}
+	if _, err := s.BelieveComposed(b, 0.5, evidence); err != nil { t.Fatal(err) }
+
+	exported := s.ExportLM(now)
+
+	// Exported text must carry the composition metadata and all decay kinds.
+	for _, want := range []string{"prior: [0.5000, 0.5000]", "evidence r-x", "lr: 3", "decay: linear rate: 0.01", "decay: step at: 30d to: 0.2"} {
+		if !strings.Contains(exported, want) {
+			t.Errorf("export missing %q\n---\n%s", want, exported)
+		}
+	}
+
+	// Round-trip: load into a fresh store.
+	s2 := NewStore()
+	if err := LoadFile(exported, s2, now); err != nil {
+		t.Fatalf("re-import failed: %v\n---\n%s", err, exported)
+	}
+
+	s2.mu.RLock()
+	loaded := s2.beliefs["b-composed"]
+	s2.mu.RUnlock()
+	if loaded == nil { t.Fatal("belief lost in round-trip") }
+	if len(loaded.CompositionEvidence) != 1 {
+		t.Fatalf("composition evidence lost: got %d blocks", len(loaded.CompositionEvidence))
+	}
+	if loaded.CompositionEvidence[0].SourceID != "r-x" {
+		t.Errorf("evidence source: want r-x, got %s", loaded.CompositionEvidence[0].SourceID)
+	}
+	if loaded.CompositionPrior != 0.5 {
+		t.Errorf("prior: want 0.5, got %g", loaded.CompositionPrior)
+	}
+
+	// Decay kinds must survive.
+	s2.mu.RLock()
+	lin := s2.frames["lin"]
+	st := s2.frames["st"]
+	s2.mu.RUnlock()
+	if lin.Decay.Kind != DecayLinear || lin.Decay.Rate != 0.01 {
+		t.Errorf("linear decay lost: %+v", lin.Decay)
+	}
+	if st.Decay.Kind != DecayStep || st.Decay.StepTo != 0.2 {
+		t.Errorf("step decay lost: %+v", st.Decay)
+	}
+}

@@ -12,9 +12,8 @@ frame reasoning
   decay: none
 
 record r1 in reasoning
-  "The zombie argument: a world physically identical to ours but with no qualia
-   is conceivable."
-  timestamp: "2024-01-15"
+  "The zombie argument: a world physically identical to ours but with no qualia is conceivable."
+  at: "2024-01-15"
 
 believe b1 in reasoning
   "The hard problem of consciousness is genuine."
@@ -56,7 +55,7 @@ frame empirical
   on_stale_derivation: mark_suspect
 
 frame parametric
-  decay: step at: 2023-01-01
+  decay: step at: 365d to: 0.5
   composition: opaque
   calibration: "frequentist count"
 ```
@@ -70,7 +69,7 @@ An immutable observation or piece of evidence. Records are the leaves of the pro
 ```
 record <id> in <frame>
   "<content>"
-  [timestamp: "<ISO-8601 date or datetime>"]
+  [at: "<ISO-8601 date or datetime>"]
   [provenance: foundational]
 ```
 
@@ -79,16 +78,15 @@ record <id> in <frame>
 | Property | Description |
 |---|---|
 | `content` | The observation text (quoted string) |
-| `timestamp` | When the observation was made; defaults to load time |
+| `at` | When the observation was made; defaults to load time |
 | `provenance: foundational` | Marks this record as a chain terminus — WeakestLink analysis stops here |
 
 **Example:**
 
 ```lumen
 record cogitate-2023 in empirical
-  "Cogitate Consortium: prefrontal cortex activity not necessary for
-   conscious experience. N=256, multi-lab replication."
-  timestamp: "2023-04-18"
+  "Cogitate Consortium: prefrontal cortex activity not necessary for conscious experience. N=256, multi-lab replication."
+  at: "2023-04-18"
   provenance: foundational
 ```
 
@@ -121,39 +119,53 @@ believe <id> in <frame>
 **Simple derivation:**
 
 ```lumen
+record r-workspace-broadcast in reasoning
+  "Conscious content is broadcast widely across cortical regions."
+
 believe b-gwt in reasoning
   "Global Workspace Theory has the strongest empirical support."
   confidence: 0.72
-  from: cogitate-2023 r-workspace-broadcast
+  from: r-workspace-broadcast
 ```
 
 **With Bayesian composition:**
 
 ```lumen
 believe b-hardproblem in reasoning
-  "The hard problem of consciousness is genuine."
+  "The hard problem of consciousness is genuine and resists functional reduction."
   confidence: 0.78
   prior: 0.5
-  evidence
-    source: r-zombie
-      likelihood_ratio: 3.2
-      confidence: 0.80
-    source: r-knowledge
-      likelihood_ratio: 2.1
-      confidence: 0.70
+  evidence r-zombie
+    lr: 3.2
+    confidence: 0.80
+  evidence r-knowledge
+    lr: 2.1
+    confidence: 0.70
 ```
 
-**With credal (interval) priors:**
+The evidence block ID names the source record or belief. A point prior
+(`prior: 0.5`) is the degenerate interval `[0.5, 0.5]`.
+
+**With credal (interval) priors and interval likelihood ratios:**
 
 ```lumen
 believe b-panpsychism in reasoning
   "Panpsychism is a live option."
   confidence: 0.45
   prior: [0.3, 0.6]
-  evidence
-    source: r-combination-problem
-      likelihood_ratio: [0.5, 0.8]
-      confidence: 0.65
+  evidence r-combination-problem
+    lr: [0.5, 0.8]
+    confidence: 0.65
+```
+
+**Correlated evidence** shares underlying support; declare the correlation
+so composition avoids double-counting:
+
+```lumen
+  evidence r-zombie
+    lr: 3.2
+    confidence: 0.80
+    correlates-with: r-conceivability 0.61
 ```
 
 ---
@@ -175,8 +187,7 @@ bridge <name> : <from-frame> → <to-frame>
 ```lumen
 bridge empirical-to-reasoning : empirical → reasoning
   loss: 0.15
-  method: "informal inference from experimental result to philosophical position"
-  verified: false
+  method: "informal inference from experimental result to philosophical position" verified: false
   assumes: "experimental design validity"
 ```
 
@@ -208,8 +219,7 @@ query <name>
 
 ```lumen
 query high-confidence-empirical
-  where: confidence > 0.7 AND frame = "empirical"
-  since: "2024-01-01"
+  where: confidence > 0.7 AND frame = "empirical" since: "2024-01-01"
 ```
 
 ---
@@ -223,7 +233,7 @@ Decay policies control how a belief's confidence changes over time.
 | `none` | `decay: none` | Confidence is constant |
 | `exponential` | `decay: exponential halflife: <duration>` | Confidence halves every `halflife` |
 | `linear` | `decay: linear rate: <rate>` | Confidence decreases by `rate` per day |
-| `step` | `decay: step at: <ISO-8601>` | Confidence drops to zero after the date |
+| `step` | `decay: step at: <duration> to: <value>` | Confidence drops to `to` once `at` has elapsed since assertion |
 
 **Duration formats:** `30d`, `6m`, `1y`, `48h`
 
@@ -279,39 +289,33 @@ frame reasoning
   decay: exponential halflife: 1825d
 
 record r-cogitate in empirical
-  "Cogitate Consortium found prefrontal cortex is not necessary for
-   conscious experience. N=256, multi-lab replication."
-  timestamp: "2023-04-18"
+  "Cogitate Consortium found prefrontal cortex is not necessary for conscious experience. N=256, multi-lab replication."
+  at: "2023-04-18"
   provenance: foundational
 
 record r-zombie in reasoning
-  "The zombie argument: a physically identical world with no qualia
-   is conceivable, and conceivability implies metaphysical possibility."
-  timestamp: "2024-01-01"
+  "The zombie argument: a physically identical world with no qualia is conceivable, and conceivability implies metaphysical possibility."
+  at: "2024-01-01"
 
 record r-knowledge in reasoning
-  "Mary's Room: a scientist who knows all physical facts about colour
-   vision learns something new upon first seeing red."
-  timestamp: "2024-01-01"
+  "Mary's Room: a scientist who knows all physical facts about colour vision learns something new upon first seeing red."
+  at: "2024-01-01"
 
 believe b-gwt in reasoning
-  "Global Workspace Theory has the strongest empirical support
-   among current consciousness theories."
+  "Global Workspace Theory has the strongest empirical support among current consciousness theories."
   confidence: 0.72
   from: r-cogitate
 
 believe b-hardproblem in reasoning
-  "The hard problem of consciousness is genuine and resists
-   functional reduction."
+  "The hard problem of consciousness is genuine and resists functional reduction."
   confidence: 0.78
   prior: 0.5
-  evidence
-    source: r-zombie
-      likelihood_ratio: 3.2
-      confidence: 0.80
-    source: r-knowledge
-      likelihood_ratio: 2.1
-      confidence: 0.70
+  evidence r-zombie
+    lr: 3.2
+    confidence: 0.80
+  evidence r-knowledge
+    lr: 2.1
+    confidence: 0.70
 
 bridge reasoning-to-parametric : reasoning → parametric
   loss: 0.20
@@ -319,7 +323,8 @@ bridge reasoning-to-parametric : reasoning → parametric
   verified: false
 
 query recent-high-confidence
-  where: confidence > 0.7
+  target: b-hardproblem
+  select: confidence-changes
   since: "2024-01-01"
 ```
 
@@ -342,7 +347,7 @@ frame-body   ::= indent "decay:" decay-policy newline
 
 record-decl  ::= "record" id "in" name newline record-body
 record-body  ::= indent quoted-string newline
-                       ["timestamp:" quoted-string newline]
+                       ["at:" quoted-string newline]
                        ["provenance:" "foundational" newline]
                  dedent
 
@@ -354,13 +359,12 @@ believe-body ::= indent quoted-string newline
                        [evidence-block]
                  dedent
 
-evidence-block ::= "evidence" newline
-                   indent evidence-entry+ dedent
-
-evidence-entry ::= "source:" id newline
+evidence-block ::= "evidence" id newline
                    indent
-                     "likelihood_ratio:" (float | "[" float "," float "]") newline
-                     "confidence:" float newline
+                     "lr:" (float | "[" float "," float "]") newline
+                     ["confidence:" float newline]
+                     ["source:" id newline]
+                     ["correlates-with:" id float newline]
                    dedent
 
 bridge-decl  ::= "bridge" id ":" name "→" name newline bridge-body
@@ -379,7 +383,7 @@ query-body   ::= indent ["where:" predicate newline]
 decay-policy ::= "none"
                | "exponential" "halflife:" duration
                | "linear" "rate:" float
-               | "step" "at:" quoted-string
+               | "step" "at:" duration "to:" float
 
 comp-mode    ::= "bayesian" | "opaque"
 stale-action ::= "mark_suspect" | "fail" | "retry"

@@ -234,13 +234,18 @@ func lexLine(line string, lineNo, startCol int) ([]Token, error) {
 			}
 			tokens = append(tokens, Token{TokIdent, sb.String(), lineNo, startC})
 
-		case ch == '>':
-			// '>' is used in query where-clauses and bridge arrows.
+		case ch == '>' || ch == '<' || ch == '=' || ch == '!':
+			// Comparison operators for query where-clauses (and bridge arrows).
+			// Two-character forms (>=, <=, !=, ==) lex as single tokens so the
+			// where-clause consumer reassembles the predicate faithfully.
+			startC := col
+			op := string(ch)
 			pos++; col++
-			tokens = append(tokens, Token{TokIdent, ">", lineNo, col - 1})
-		case ch == '<':
-			pos++; col++
-			tokens = append(tokens, Token{TokIdent, "<", lineNo, col - 1})
+			if pos < len(runes) && runes[pos] == '=' {
+				op += "="
+				pos++; col++
+			}
+			tokens = append(tokens, Token{TokIdent, op, lineNo, startC})
 		default:
 			return nil, fmt.Errorf("unexpected character %q at %d:%d", ch, lineNo, col)
 		}

@@ -172,10 +172,20 @@ func loadParsed(result *ParseResult, store *Store, now time.Time) error {
 				// evidence cannot be composed is a load error, not a shrug.
 				return fmt.Errorf("belief %s: evidence composition failed: %w", pb.ID, err)
 			}
-			// Update the stored belief's confidence with the posterior midpoint.
+			// Update the stored belief's confidence with the posterior midpoint,
+			// and store the composition metadata so FragilityScan uses the exact
+			// sensitivity path and ExportLM round-trips the evidence.
 			store.mu.Lock()
 			if stored, ok := store.beliefs[pb.ID]; ok {
 				stored.Confidence = posterior.Midpoint()
+				stored.CompositionPrior = (prior.Lo + prior.Hi) / 2
+				for _, ev := range evidence {
+					stored.CompositionEvidence = append(stored.CompositionEvidence, Evidence{
+						SourceID:        ev.SourceID,
+						Confidence:      ev.Confidence,
+						LikelihoodRatio: (ev.LRLo + ev.LRHi) / 2,
+					})
+				}
 			}
 			store.mu.Unlock()
 		}
