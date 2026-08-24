@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -39,7 +38,7 @@ func (s *Server) handleAssertRecord(w http.ResponseWriter, r *http.Request) {
 
 	id := req.ID
 	if id == "" {
-		id = fmt.Sprintf("rec-%d", time.Now().UnixNano())
+		id = newID("rec")
 	}
 	if err := s.store.Assert(&lumen.Record{
 		ID:        id,
@@ -74,8 +73,12 @@ func (s *Server) handleBelieve(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "content is required")
 		return
 	}
-	if req.Confidence <= 0 || req.Confidence > 1 {
-		req.Confidence = 0.7
+	if req.Confidence > 1 {
+		writeErr(w, http.StatusBadRequest, "confidence must be in (0, 1]")
+		return
+	}
+	if req.Confidence <= 0 {
+		req.Confidence = 0.7 // absent from request — default, not a rewrite
 	}
 	frame := req.Frame
 	if frame == "" {
@@ -85,7 +88,7 @@ func (s *Server) handleBelieve(w http.ResponseWriter, r *http.Request) {
 
 	id := req.ID
 	if id == "" {
-		id = fmt.Sprintf("bel-%d", time.Now().UnixNano())
+		id = newID("bel")
 	}
 	if err := s.store.Believe(&lumen.Belief{
 		ID:         id,

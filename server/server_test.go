@@ -48,7 +48,7 @@ func get(t *testing.T, srv *server.Server, path string) *httptest.ResponseRecord
 }
 
 func TestHealth(t *testing.T) {
-	w := get(t, newTestServer(t), "/health")
+	w := get(t, newTestServer(t), "/v1/health")
 	if w.Code != 200 {
 		t.Fatalf("want 200, got %d", w.Code)
 	}
@@ -56,7 +56,7 @@ func TestHealth(t *testing.T) {
 
 func TestBelieveAndList(t *testing.T) {
 	srv := newTestServer(t)
-	w := post(t, srv, "/believe", `{"content":"The hard problem of consciousness is real","confidence":0.8}`)
+	w := post(t, srv, "/v1/believe", `{"content":"The hard problem of consciousness is real","confidence":0.8}`)
 	if w.Code != 201 {
 		t.Fatalf("believe: want 201, got %d: %s", w.Code, w.Body)
 	}
@@ -66,7 +66,7 @@ func TestBelieveAndList(t *testing.T) {
 		t.Fatal("no id returned")
 	}
 
-	w2 := get(t, srv, "/beliefs")
+	w2 := get(t, srv, "/v1/beliefs")
 	if w2.Code != 200 {
 		t.Fatalf("list: want 200, got %d", w2.Code)
 	}
@@ -79,9 +79,9 @@ func TestBelieveAndList(t *testing.T) {
 
 func TestContextText(t *testing.T) {
 	srv := newTestServer(t)
-	post(t, srv, "/believe", `{"content":"Consciousness involves subjective experience","confidence":0.75}`)
+	post(t, srv, "/v1/believe", `{"content":"Consciousness involves subjective experience","confidence":0.75}`)
 
-	w := get(t, srv, "/context")
+	w := get(t, srv, "/v1/context")
 	if w.Code != 200 {
 		t.Fatalf("want 200, got %d: %s", w.Code, w.Body)
 	}
@@ -94,9 +94,9 @@ func TestContextText(t *testing.T) {
 
 func TestContextJSON(t *testing.T) {
 	srv := newTestServer(t)
-	post(t, srv, "/believe", `{"content":"GWT has strong empirical support","confidence":0.7}`)
+	post(t, srv, "/v1/believe", `{"content":"GWT has strong empirical support","confidence":0.7}`)
 
-	w := get(t, srv, "/context?format=json")
+	w := get(t, srv, "/v1/context?format=json")
 	if w.Code != 200 {
 		t.Fatalf("want 200, got %d", w.Code)
 	}
@@ -114,7 +114,7 @@ func TestIngest(t *testing.T) {
 	body, _ := json.Marshal(map[string]string{
 		"text": "The study found that meditation reduces anxiety. Therefore, mindfulness therapy appears to have genuine clinical value.",
 	})
-	w := post(t, srv, "/ingest", string(body))
+	w := post(t, srv, "/v1/ingest", string(body))
 	if w.Code != 200 {
 		t.Fatalf("ingest: want 200, got %d: %s", w.Code, w.Body)
 	}
@@ -125,7 +125,7 @@ func TestIngest(t *testing.T) {
 
 func TestAssertRecord(t *testing.T) {
 	srv := newTestServer(t)
-	w := post(t, srv, "/records", `{"content":"Babcock et al. 2024 found UV superradiance in tryptophan networks"}`)
+	w := post(t, srv, "/v1/records", `{"content":"Babcock et al. 2024 found UV superradiance in tryptophan networks"}`)
 	if w.Code != 201 {
 		t.Fatalf("want 201, got %d: %s", w.Code, w.Body)
 	}
@@ -138,12 +138,12 @@ func TestAssertRecord(t *testing.T) {
 
 func TestRetract(t *testing.T) {
 	srv := newTestServer(t)
-	w := post(t, srv, "/records", `{"content":"Initial observation"}`)
+	w := post(t, srv, "/v1/records", `{"content":"Initial observation"}`)
 	var created map[string]string
 	_ = json.NewDecoder(w.Body).Decode(&created)
 
 	body, _ := json.Marshal(map[string]string{"record_id": created["id"], "reason": "superseded"})
-	w2 := post(t, srv, "/retract", string(body))
+	w2 := post(t, srv, "/v1/retract", string(body))
 	if w2.Code != 204 {
 		t.Fatalf("retract: want 204, got %d: %s", w2.Code, w2.Body)
 	}
@@ -154,7 +154,7 @@ func TestRetract(t *testing.T) {
 func TestSelfClaim(t *testing.T) {
 	srv := newTestServer(t)
 
-	w := post(t, srv, "/self/claim", `{
+	w := post(t, srv, "/v1/self/claim", `{
 		"kind": "asserted",
 		"content": "The retrodiction problem arises when decay policies are applied retroactively",
 		"confidence": 0.85
@@ -171,7 +171,7 @@ func TestSelfClaim(t *testing.T) {
 	t.Logf("created claim: %s (frame: %s)", id, created["frame"])
 
 	// It should appear in self/claims
-	w2 := get(t, srv, "/self/claims")
+	w2 := get(t, srv, "/v1/self/claims")
 	var claims []map[string]any
 	_ = json.NewDecoder(w2.Body).Decode(&claims)
 	if len(claims) == 0 {
@@ -181,10 +181,10 @@ func TestSelfClaim(t *testing.T) {
 
 func TestSelfContext(t *testing.T) {
 	srv := newTestServer(t)
-	post(t, srv, "/self/claim", `{"kind":"derived","content":"Frame-dependent decay is the correct model for cross-frame beliefs","confidence":0.78}`)
-	post(t, srv, "/self/claim", `{"kind":"retrieved","content":"The hard problem of consciousness resists functional reduction","confidence":0.82}`)
+	post(t, srv, "/v1/self/claim", `{"kind":"derived","content":"Frame-dependent decay is the correct model for cross-frame beliefs","confidence":0.78}`)
+	post(t, srv, "/v1/self/claim", `{"kind":"retrieved","content":"The hard problem of consciousness resists functional reduction","confidence":0.82}`)
 
-	w := get(t, srv, "/self/context")
+	w := get(t, srv, "/v1/self/context")
 	if w.Code != 200 {
 		t.Fatalf("want 200, got %d: %s", w.Code, w.Body)
 	}
@@ -199,7 +199,7 @@ func TestSelfCorrect(t *testing.T) {
 	srv := newTestServer(t)
 
 	// Assert an initial claim.
-	w := post(t, srv, "/self/claim", `{"kind":"asserted","content":"Illusionism adequately addresses the hard problem","confidence":0.6}`)
+	w := post(t, srv, "/v1/self/claim", `{"kind":"asserted","content":"Illusionism adequately addresses the hard problem","confidence":0.6}`)
 	var c map[string]any
 	_ = json.NewDecoder(w.Body).Decode(&c)
 	priorID := c["id"].(string)
@@ -210,7 +210,7 @@ func TestSelfCorrect(t *testing.T) {
 		"content":     "Illusionism fails to account for the phenomenal character of experience",
 		"reason":      "counterarguments from knowledge argument",
 	})
-	w2 := post(t, srv, "/self/correct", string(body))
+	w2 := post(t, srv, "/v1/self/correct", string(body))
 	if w2.Code != 201 {
 		t.Fatalf("self/correct: want 201, got %d: %s", w2.Code, w2.Body)
 	}
@@ -220,4 +220,37 @@ func TestSelfCorrect(t *testing.T) {
 		t.Errorf("expected retracted_id=%s, got %v", priorID, correction["retracted_id"])
 	}
 	t.Logf("correction: %v", correction)
+}
+
+// TestLegacyRedirects verifies legacy paths issue 308 (method- and
+// body-preserving) redirects with concrete paths and query strings intact.
+func TestLegacyRedirects(t *testing.T) {
+	srv := newTestServer(t)
+
+	// GET with query string
+	req := httptest.NewRequest("GET", "/context?max=5&min_confidence=0.7", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+	if w.Code != http.StatusPermanentRedirect {
+		t.Fatalf("GET /context: want 308, got %d", w.Code)
+	}
+	if loc := w.Header().Get("Location"); loc != "/v1/context?max=5&min_confidence=0.7" {
+		t.Errorf("query string lost: Location=%q", loc)
+	}
+
+	// POST must be 308 (301 would drop method and body)
+	req = httptest.NewRequest("POST", "/ingest", strings.NewReader(`{"text":"x"}`))
+	w = httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+	if w.Code != http.StatusPermanentRedirect {
+		t.Fatalf("POST /ingest: want 308, got %d", w.Code)
+	}
+
+	// Parameterised path must substitute the concrete ID
+	req = httptest.NewRequest("GET", "/explain/bel-12345", nil)
+	w = httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+	if loc := w.Header().Get("Location"); loc != "/v1/explain/bel-12345" {
+		t.Errorf("path value not preserved: Location=%q", loc)
+	}
 }

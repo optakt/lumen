@@ -77,14 +77,46 @@ func New(cfg Config, logger *slog.Logger) (*Server, error) {
 }
 
 func (s *Server) routes() {
-	s.mux.HandleFunc("GET /health",       s.handleHealth)
-	s.mux.HandleFunc("GET /context",      s.handleContext)
-	s.mux.HandleFunc("GET /beliefs",      s.handleListBeliefs)
-	s.mux.HandleFunc("POST /records",     s.handleAssertRecord)
-	s.mux.HandleFunc("POST /believe",     s.handleBelieve)
-	s.mux.HandleFunc("POST /retract",     s.handleRetract)
-	s.mux.HandleFunc("POST /ingest",      s.handleIngest)
-	s.mux.HandleFunc("GET /explain/{id}", s.handleExplain)
+	// Versioned routes (stable API).
+	s.mux.HandleFunc("GET /v1/health",         s.handleHealth)
+	s.mux.HandleFunc("GET /v1/context",        s.handleContext)
+	s.mux.HandleFunc("GET /v1/beliefs",        s.handleListBeliefs)
+	s.mux.HandleFunc("POST /v1/records",       s.handleAssertRecord)
+	s.mux.HandleFunc("POST /v1/believe",       s.handleBelieve)
+	s.mux.HandleFunc("POST /v1/retract",       s.handleRetract)
+	s.mux.HandleFunc("POST /v1/ingest",        s.handleIngest)
+	s.mux.HandleFunc("GET /v1/explain/{id}",   s.handleExplain)
+
+	// Legacy redirects — keep existing integrations working.
+	//
+	// 308 Permanent Redirect, not 301: clients follow 301 on POST by
+	// re-issuing GET without the body, silently breaking POST endpoints.
+	// 308 preserves both method and body.
+	//
+	// The target is built from the request itself — path plus query — so
+	// parameterised paths (/explain/{id}) and query strings survive the hop.
+	for _, from := range []string{
+		"GET /health",
+		"GET /context",
+		"GET /beliefs",
+		"POST /records",
+		"POST /believe",
+		"POST /retract",
+		"POST /ingest",
+		"GET /explain/{id}",
+	} {
+		s.mux.HandleFunc(from, redirectToV1)
+	}
+}
+
+// redirectToV1 issues a 308 to the /v1-prefixed equivalent of the request,
+// preserving the concrete path segments and the query string.
+func redirectToV1(w http.ResponseWriter, r *http.Request) {
+	target := "/v1" + r.URL.Path
+	if r.URL.RawQuery != "" {
+		target += "?" + r.URL.RawQuery
+	}
+	http.Redirect(w, r, target, http.StatusPermanentRedirect)
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {

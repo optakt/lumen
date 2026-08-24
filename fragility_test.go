@@ -119,3 +119,117 @@ func TestMinCut(t *testing.T) {
 		t.Errorf("mixed (0.0, 1.0): min cut should be 1, got %d", got)
 	}
 }
+
+// TestFragilityComposedPath verifies that BelieveComposed beliefs use
+// SensitivityAnalysis (exact) rather than the norScale approximation,
+// and that the composition metadata survives a BoltDB round-trip.
+func TestFragilityComposedPath(t *testing.T) {
+	s := NewStore()
+	now := time.Now()
+
+	s.RegisterFrame(Frame{Name: "reasoning", Decay: DecayPolicy{Kind: DecayNone}})
+
+	r1 := &Record{ID: "r-zombie", Frame: "reasoning", Content: "Zombie argument: conceivability implies possibility", Timestamp: now}
+	r2 := &Record{ID: "r-knowledge", Frame: "reasoning", Content: "Knowledge argument: Mary learns something new", Timestamp: now}
+	if err := s.Assert(r1); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Assert(r2); err != nil {
+		t.Fatal(err)
+	}
+
+	prior := 0.5
+	evidence := []Evidence{
+		{SourceID: "r-zombie",    Confidence: 0.8, LikelihoodRatio: 3.2},
+		{SourceID: "r-knowledge", Confidence: 0.7, LikelihoodRatio: 2.1},
+	}
+	b := &Belief{
+		ID:         "b-hardproblem",
+		Content:    "The hard problem of consciousness is genuine",
+		Confidence: 0.78,
+		Frame:      "reasoning",
+		AssertedAt: now,
+		Derivation: []string{"r-zombie", "r-knowledge"},
+	}
+	cb, err := s.BelieveComposed(b, prior, evidence)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("composed posterior=%.4f declared=%.4f", cb.ComputedConfidence, b.Confidence)
+
+	// Verify composition metadata stored on the belief.
+	s.mu.RLock()
+	stored := s.beliefs["b-hardproblem"]
+	s.mu.RUnlock()
+	if len(stored.CompositionEvidence) != 2 {
+		t.Fatalf("expected 2 evidence blocks stored, got %d", len(stored.CompositionEvidence))
+	}
+	if stored.CompositionPrior != prior {
+		t.Fatalf("expected prior %.2f, got %.2f", prior, stored.CompositionPrior)
+	}
+
+	// FragilityScan should use the sensitivity path, not norScale.
+	entries := s.FragilityScan(now)
+	if len(entries) == 0 {
+		t.Fatal("expected at least one fragility entry")
+	}
+	entry := entries[0]
+	if entry.WeakestKind != "evidence" {
+		t.Errorf("expected WeakestKind=evidence (sensitivity path), got %q", entry.WeakestKind)
+	}
+	if entry.Drop <= 0 {
+		t.Errorf("expected positive drop, got %.4f", entry.Drop)
+	}
+	t.Logf("fragility: drop=%.4f weakest=%s", entry.Drop, entry.WeakestSource)
+}
+
+// TestFragilityComposedDecayScale verifies sensitivity results are scaled
+// into decayed space. The old code passed decayed currentConf as the full
+// posterior while PosteriorWithout stayed undecayed — for an aged belief,
+// ConfWithout could exceed CurrentConf, implying evidence removal *raises*
+// confidence.
+func TestFragilityComposedDecayScale(t *testing.T) {
+	s := NewStore()
+	t0 := time.Now().Add(-14 * 24 * time.Hour) // asserted two weeks ago
+
+	// 7-day halflife: two weeks later confidence is ~25% of assertion value.
+	s.RegisterFrame(Frame{Name: "fast-decay", Decay: DecayPolicy{
+		Kind: DecayExponential, Halflife: 7 * 24 * time.Hour,
+	}})
+
+	r1 := &Record{ID: "r-a", Frame: "fast-decay", Content: "Supporting evidence A", Timestamp: t0}
+	r2 := &Record{ID: "r-b", Frame: "fast-decay", Content: "Supporting evidence B", Timestamp: t0}
+	if err := s.Assert(r1); err != nil { t.Fatal(err) }
+	if err := s.Assert(r2); err != nil { t.Fatal(err) }
+
+	evidence := []Evidence{
+		{SourceID: "r-a", Confidence: 0.8, LikelihoodRatio: 3.0},
+		{SourceID: "r-b", Confidence: 0.7, LikelihoodRatio: 2.0},
+	}
+	b := &Belief{
+		ID: "b-aged", Content: "An aged composed belief", Confidence: 0.8,
+		Frame: "fast-decay", AssertedAt: t0, Derivation: []string{"r-a", "r-b"},
+	}
+	if _, err := s.BelieveComposed(b, 0.5, evidence); err != nil { t.Fatal(err) }
+
+	now := time.Now()
+	entries := s.FragilityScan(now)
+	if len(entries) == 0 { t.Fatal("expected a fragility entry") }
+	e := entries[0]
+
+	t.Logf("current=%.4f confWithout=%.4f drop=%.4f minCut=%d",
+		e.CurrentConf, e.ConfWithout, e.Drop, e.MinCut)
+
+	if e.CurrentConf > 0.35 {
+		t.Fatalf("test setup wrong: expected heavy decay, current=%.4f", e.CurrentConf)
+	}
+	if e.ConfWithout >= e.CurrentConf {
+		t.Errorf("scale mixing: ConfWithout (%.4f) >= CurrentConf (%.4f)", e.ConfWithout, e.CurrentConf)
+	}
+	if e.Drop <= 0 || e.Drop > e.CurrentConf {
+		t.Errorf("drop out of range: %.4f (current %.4f)", e.Drop, e.CurrentConf)
+	}
+	if e.MinCut != 2 {
+		t.Errorf("both evidence blocks support (LR>1): want MinCut=2, got %d", e.MinCut)
+	}
+}

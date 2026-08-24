@@ -60,7 +60,7 @@ export default definePluginEntry({
 
     // Check connectivity once at startup; disable both hooks if unreachable.
     let available = false;
-    fetch(`${baseURL}/health`, { signal: AbortSignal.timeout(2000) })
+    fetch(`${baseURL}/v1/health`, { signal: AbortSignal.timeout(2000) })
       .then((r) => { available = r.ok; })
       .catch(() => {
         api.log?.warn(`[lumen] server not reachable at ${baseURL} — belief tracking disabled`);
@@ -77,7 +77,7 @@ export default definePluginEntry({
         const parts: string[] = [];
 
         const gr = await fetch(
-          `${baseURL}/context?max=${maxBeliefs}&min_confidence=${minConf}`,
+          `${baseURL}/v1/context?max=${maxBeliefs}&min_confidence=${minConf}`,
           { signal: AbortSignal.timeout(3000) },
         );
         if (gr.ok) {
@@ -89,7 +89,7 @@ export default definePluginEntry({
 
         if (selfCtx) {
           const sr = await fetch(
-            `${baseURL}/self/context`,
+            `${baseURL}/v1/self/context`,
             { signal: AbortSignal.timeout(3000) },
           );
           if (sr.ok) {
@@ -119,7 +119,7 @@ export default definePluginEntry({
 
       const combined = texts.join("\n\n");
       try {
-        await fetch(`${baseURL}/ingest`, {
+        await fetch(`${baseURL}/v1/ingest`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: combined, min_confidence: minConf }),

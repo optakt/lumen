@@ -20,12 +20,26 @@ import (
 // ─── Routes (called from routes()) ───────────────────────────────────────────
 
 func (s *Server) routeSelf() {
-	s.mux.HandleFunc("POST /self/claim",              s.handleSelfClaim)
-	s.mux.HandleFunc("POST /self/correct",            s.handleSelfCorrect)
-	s.mux.HandleFunc("GET /self/claims",              s.handleSelfList)
-	s.mux.HandleFunc("GET /self/context",             s.handleSelfContext)
-	s.mux.HandleFunc("GET /self/biography/{id}",      s.handleSelfBiography)
-	s.mux.HandleFunc("GET /self/frame-report",        s.handleSelfFrameReport)
+	// Versioned self-model routes.
+	s.mux.HandleFunc("POST /v1/self/claim",              s.handleSelfClaim)
+	s.mux.HandleFunc("POST /v1/self/correct",            s.handleSelfCorrect)
+	s.mux.HandleFunc("GET /v1/self/claims",              s.handleSelfList)
+	s.mux.HandleFunc("GET /v1/self/context",             s.handleSelfContext)
+	s.mux.HandleFunc("GET /v1/self/biography/{id}",      s.handleSelfBiography)
+	s.mux.HandleFunc("GET /v1/self/frame-report",        s.handleSelfFrameReport)
+
+	// Legacy redirects for self-model routes — 308 with dynamic target,
+	// see redirectToV1 in server.go for the rationale.
+	for _, from := range []string{
+		"POST /self/claim",
+		"POST /self/correct",
+		"GET /self/claims",
+		"GET /self/context",
+		"GET /self/biography/{id}",
+		"GET /self/frame-report",
+	} {
+		s.mux.HandleFunc(from, redirectToV1)
+	}
 }
 
 // ─── Handlers ────────────────────────────────────────────────────────────────
@@ -62,7 +76,7 @@ func (s *Server) handleSelfClaim(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
 	id := req.ID
 	if id == "" {
-		id = fmt.Sprintf("self:%s-%d", req.Kind, now.UnixNano())
+		id = newID("self:" + req.Kind)
 	}
 
 	// Sentinel record — retracting this cascades suspect marking to the belief.
@@ -86,6 +100,9 @@ func (s *Server) handleSelfClaim(w http.ResponseWriter, r *http.Request) {
 		AssertedAt: now,
 		Derivation: derivation,
 	}); err != nil {
+		// Clean up the sentinel — otherwise it stays active with nothing
+		// depending on it, and the next claim with this ID conflicts.
+		_ = s.store.Retract(sentinelID, "orphaned: belief assertion failed", now)
 		writeErr(w, http.StatusConflict, "believe: "+err.Error())
 		return
 	}
@@ -133,11 +150,11 @@ func (s *Server) handleSelfCorrect(w http.ResponseWriter, r *http.Request) {
 		conf = 0.75
 	}
 	s.ensureFrame("reasoning")
-	newID := fmt.Sprintf("self:corrected-%d", now.UnixNano())
-	sentinelID := "sentinel:" + newID
+	replacementID := newID("self:corrected")
+	sentinelID := "sentinel:" + replacementID
 	if err := s.store.Assert(&lumen.Record{
 		ID:        sentinelID,
-		Content:   "validity sentinel for " + newID,
+		Content:   "validity sentinel for " + replacementID,
 		Timestamp: now,
 		Frame:     "reasoning",
 	}); err != nil {
@@ -145,7 +162,7 @@ func (s *Server) handleSelfCorrect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.store.Believe(&lumen.Belief{
-		ID:         newID,
+		ID:         replacementID,
 		Content:    req.Content,
 		Confidence: conf,
 		Frame:      "reasoning",
@@ -159,7 +176,7 @@ func (s *Server) handleSelfCorrect(w http.ResponseWriter, r *http.Request) {
 	s.save()
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"retracted_id": req.ReplacesID,
-		"new_id":       newID,
+		"new_id":       replacementID,
 	})
 }
 

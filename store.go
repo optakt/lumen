@@ -323,6 +323,11 @@ func (s *Store) BelieveComposed(b *Belief, prior float64, evidence []Evidence) (
 	cb.Content = b.Content
 	cb.Frame = b.Frame
 
+	// Store composition metadata on the belief so it survives persistence
+	// and is available to FragilityScan for sensitivity analysis.
+	b.CompositionPrior    = prior
+	b.CompositionEvidence = evidence
+
 	// Delegate storage to Believe: one path owns graph edges, cross-frame
 	// snapshots, suspect inheritance, and entity/temporal indexing.
 	// Calibration is advisory, not blocking — the belief is stored as declared.
