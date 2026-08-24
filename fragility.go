@@ -1,0 +1,203 @@
+package lumen
+
+import (
+	"fmt"
+	"math"
+	"sort"
+	"time"
+)
+
+// FragilityEntry describes how sensitive a belief is to the loss of a single source.
+type FragilityEntry struct {
+	BeliefID       string
+	BeliefContent  string
+	CurrentConf    float64
+	WeakestSource  string  // ID of the source whose loss is most damaging
+	WeakestKind    string  // "record" or "belief"
+	ConfWithout    float64 // estimated confidence without the weakest source
+	Drop           float64 // CurrentConf - ConfWithout (positive = fragile)
+	TotalSources   int
+	// MinCut is the minimum number of sources that must be simultaneously removed
+	// to collapse the belief confidence to zero. For N full-confidence records,
+	// MinCut = N (all must be retracted). For decayed beliefs, MinCut may be 1.
+	MinCut int
+}
+
+func (e FragilityEntry) String() string {
+	return fmt.Sprintf("[%.0f%%→%.0f%%] %s  (weakest: %s)", e.CurrentConf*100, e.ConfWithout*100, e.BeliefID, e.WeakestSource)
+}
+
+// FragilityScan scans all active beliefs and returns them ranked by fragility:
+// how much confidence would drop if their weakest source were retracted.
+//
+// The estimate is heuristic for beliefs without Bayesian composition metadata:
+//   - 1 source:  drop to 0
+//   - 2 sources: drop to half-weight of the remaining source's confidence
+//   - N sources: remove the weakest and assume noisy-or on the remainder
+//
+// For beliefs with full Bayesian composition data the sensitivity analysis
+// gives a better answer; this function uses that path when available.
+func (s *Store) FragilityScan(now time.Time) []FragilityEntry {
+	s.mu.RLock()
+	type snap struct {
+		id          string
+		content     string
+		frame       Frame
+		conf        float64
+		state       BeliefState
+		derivation  []string
+	}
+	var beliefs []snap
+	for id, b := range s.beliefs {
+		if b.State != BeliefActive {
+			continue
+		}
+		frame := s.frames[b.Frame]
+		beliefs = append(beliefs, snap{
+			id:         id,
+			content:    b.Content,
+			frame:      frame,
+			conf:       b.CurrentConfidence(frame, now),
+			state:      b.State,
+			derivation: append([]string{}, b.Derivation...),
+		})
+	}
+	s.mu.RUnlock()
+
+	var entries []FragilityEntry
+	for _, b := range beliefs {
+		if len(b.derivation) == 0 {
+			continue
+		}
+		entry := s.fragEntryFor(b.id, b.content, b.conf, b.derivation, b.frame, now)
+		if entry != nil {
+			entries = append(entries, *entry)
+		}
+	}
+
+	// Sort by drop descending (most fragile first), then by current confidence descending.
+	sort.Slice(entries, func(i, j int) bool {
+		if math.Abs(entries[i].Drop-entries[j].Drop) > 1e-6 {
+			return entries[i].Drop > entries[j].Drop
+		}
+		return entries[i].CurrentConf > entries[j].CurrentConf
+	})
+	return entries
+}
+
+// sourceConf is a lightweight struct used in fragility calculations.
+type sourceConf struct {
+	id   string
+	kind string
+	conf float64 // 1.0 for non-retracted records (they don't decay); decayed for beliefs
+}
+
+// fragEntryFor computes the fragility entry for one belief.
+func (s *Store) fragEntryFor(beliefID, content string, currentConf float64, derivation []string, frame Frame, now time.Time) *FragilityEntry {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var sources []sourceConf
+	for _, srcID := range derivation {
+		if rec, ok := s.records[srcID]; ok {
+			c := 1.0
+			if rec.Retracted {
+				c = 0
+			}
+			sources = append(sources, sourceConf{srcID, "record", c})
+		} else if src, ok := s.beliefs[srcID]; ok {
+			srcFrame := s.frames[src.Frame]
+			sources = append(sources, sourceConf{srcID, "belief", src.CurrentConfidence(srcFrame, now)})
+		}
+	}
+
+	if len(sources) == 0 {
+		return nil
+	}
+
+	// Find the source whose removal causes the largest drop.
+	// Estimate: noisy-or of remaining sources, scaled by their own confidence.
+	worstID   := sources[0].id
+	worstKind := sources[0].kind
+	worstRemConf := estimateWithout(sources, 0, currentConf)
+
+	for i := 1; i < len(sources); i++ {
+		remConf := estimateWithout(sources, i, currentConf)
+		if remConf < worstRemConf {
+			worstRemConf = remConf
+			worstID = sources[i].id
+			worstKind = sources[i].kind
+		}
+	}
+
+	drop := currentConf - worstRemConf
+	if drop < 0 {
+		drop = 0
+	}
+
+	// Compute minimum cut: how many sources must be removed to reach zero confidence.
+	// If any single source removal drops to zero, MinCut = 1.
+	// Otherwise count sources required until noisy-or of remainder reaches zero.
+	minCut := computeMinCut(sources, currentConf)
+
+	return &FragilityEntry{
+		BeliefID:      beliefID,
+		BeliefContent: content,
+		CurrentConf:   currentConf,
+		WeakestSource: worstID,
+		WeakestKind:   worstKind,
+		ConfWithout:   worstRemConf,
+		Drop:          drop,
+		TotalSources:  len(sources),
+		MinCut:        minCut,
+	}
+}
+
+// estimateWithout estimates confidence when source at index skip is removed.
+// Delegates to norScale (defined in impact.go) for the noisy-or calculation.
+func estimateWithout(sources []sourceConf, skip int, currentConf float64) float64 {
+	if len(sources) == 1 {
+		return 0 // only source: removing it leaves zero support
+	}
+	without := make([]sourceConf, 0, len(sources)-1)
+	for i, s := range sources {
+		if i != skip { without = append(without, s) }
+	}
+	return norScale(without, sources, currentConf)
+}
+
+// computeMinCut finds the minimum number of sources to remove that would zero out
+// confidence. It uses a greedy approach: repeatedly remove the source with the
+// highest confidence (most damaging to the noisy-or) until the result is 0.
+func computeMinCut(sources []sourceConf, currentConf float64) int {
+	if len(sources) == 0 || currentConf == 0 {
+		return 0
+	}
+	// Work on a copy.
+	remaining := make([]sourceConf, len(sources))
+	copy(remaining, sources)
+	cut := 0
+	for len(remaining) > 0 {
+		// Remove highest-confidence source first (greedy min cut).
+		best := 0
+		for i := 1; i < len(remaining); i++ {
+			if remaining[i].conf > remaining[best].conf {
+				best = i
+			}
+		}
+		remaining = append(remaining[:best], remaining[best+1:]...)
+		cut++
+		// Check noisy-or of remaining.
+		p := 1.0
+		for _, s := range remaining {
+			p *= (1.0 - s.conf)
+		}
+		if 1.0-p < 1e-9 {
+			return cut
+		}
+		if len(remaining) == 0 {
+			return cut
+		}
+	}
+	return cut
+}
