@@ -115,20 +115,41 @@ Runs NLP extraction over `text`, automatically detecting frames and linking deri
 | `-ingest-confidence` | `0.55` | Min confidence for `/ingest` |
 | `-frame` | `reasoning` | Default frame for ingested beliefs |
 
+## Hermes
+
+[Hermes](https://github.com/NousResearch/hermes-agent) uses a shell hook system where any executable can register for agent lifecycle events. The `lumen-hook` binary reads Hermes's JSON payload from stdin and calls the Lumen HTTP API.
+
+See [`integrations/hermes/`](integrations/hermes/) for the setup guide.
+
+**Quick start:**
+
+```bash
+# 1. Build the binaries
+go install github.com/optakt/lumen/cmd/lumen-hook@latest
+go install github.com/optakt/lumen/cmd/lumen-server@latest
+
+# 2. Start the Lumen server
+lumen-server -addr :3737 -db ~/.lumen/beliefs.db
+
+# 3. Add to ~/.hermes/cli-config.yaml
+```
+
+```yaml
+hooks:
+  pre_llm_call:
+    - command: "lumen-hook"
+  post_llm_call:
+    - command: "lumen-hook"
+```
+
+Hermes prompts for shell hook consent on first use.
+
 ## Other frameworks
 
-The HTTP API is framework-agnostic. Any agent harness that can make HTTP calls can integrate with Lumen using the same two-hook pattern:
+The HTTP API is framework-agnostic. Any harness that can make HTTP calls or spawn subprocesses can integrate with Lumen using the two-hook pattern:
 
 1. Before model call: `GET /context` → inject text into context
 2. After assistant turn: `POST /ingest` → extract and persist claims
 
-For Hermes (Python), the shell hook system can call Lumen directly:
-
-```yaml
-# ~/.hermes/config.yaml
-hooks:
-  pre_llm_call:
-    - command: "curl -s http://localhost:3737/context"
-```
-
-The `pre_llm_call` hook output is injected as context automatically.
+For shell-hook systems (Hermes, Cursor): use the `lumen-hook` binary.
+For programmatic hooks (Pi, Mastra): call the HTTP API directly.
