@@ -152,8 +152,10 @@ func (s *Store) BeliefHealth(beliefID string, now time.Time) (*HealthScore, erro
 	// 5. Consistency (10%) — check for declared conflicts
 	conflicts := s.ConflictScan(now)
 	conflictScore := 100.0
+	ownConflicts := 0
 	for _, c := range conflicts {
 		if c.BeliefA == beliefID || c.BeliefB == beliefID {
+			ownConflicts++
 			penalty := c.Strength * 40
 			conflictScore -= penalty
 			hs.Warnings = append(hs.Warnings, fmt.Sprintf("Potential conflict with %s (strength: %.0f%%): %s",
@@ -161,8 +163,10 @@ func (s *Store) BeliefHealth(beliefID string, now time.Time) (*HealthScore, erro
 		}
 	}
 	conflictScore = math.Max(0, conflictScore)
+	// Note reflects conflicts involving *this* belief — store-wide conflicts
+	// that don't touch it are not its problem and were never penalized.
 	conflictNote := "no conflicts detected"
-	if len(conflicts) > 0 { conflictNote = fmt.Sprintf("%d conflict(s)", len(conflicts)) }
+	if ownConflicts > 0 { conflictNote = fmt.Sprintf("%d conflict(s)", ownConflicts) }
 	components = append(components, HealthComponent{"Consistency", conflictScore, conflictScore * 0.10, 0.10, conflictNote})
 
 	// Total
@@ -234,9 +238,13 @@ func (s *Store) StoreHealth(now time.Time) *HealthScore {
 	})
 
 	// Graph connectivity: fraction of beliefs with at least one source
+	// Numerator and denominator must cover the same population: AllBeliefs
+	// excludes superseded beliefs, so the count here must too — otherwise
+	// coverage can exceed 100%.
 	sourced := 0
 	s.mu.RLock()
 	for _, b := range s.beliefs {
+		if b.State == BeliefSuperseded { continue }
 		if len(b.Derivation) > 0 { sourced++ }
 	}
 	s.mu.RUnlock()
