@@ -18,9 +18,16 @@ import (
 // Cosine similarity between two documents' TF-IDF vectors gives a
 // semantic similarity score that captures "about the same thing"
 // better than exact string matching.
+//
+// Vectors and per-document norms are pre-computed at index build time so
+// that each query only performs n dot products — no per-query map allocation.
 type SearchIndex struct {
-	// docs maps node ID → term frequency map
+	// docs maps node ID → raw term frequency map (kept for IDF reuse)
 	docs map[string]map[string]float64
+	// vecs maps node ID → pre-computed TF-IDF vector
+	vecs map[string]map[string]float64
+	// norms maps node ID → pre-computed L2 norm of its TF-IDF vector
+	norms map[string]float64
 	// idf maps term → log(N / df) where df is document frequency
 	idf map[string]float64
 	// N is total document count
@@ -79,11 +86,25 @@ func (s *Store) BuildSearchIndex() *SearchIndex {
 		idx.idf[term] = math.Log(float64(idx.N+1) / float64(count+1))
 	}
 
+	// Pre-compute TF-IDF vectors and their L2 norms.
+	// This trades index build time for O(1) query setup: instead of
+	// recomputing all document vectors on every query, each search only needs
+	// to compute the query vector and then dot it against pre-built doc vectors.
+	idx.vecs = make(map[string]map[string]float64, len(idx.docs))
+	idx.norms = make(map[string]float64, len(idx.docs))
+	for id, tf := range idx.docs {
+		vec := tfidfVector(tf, idx.idf)
+		idx.vecs[id] = vec
+		idx.norms[id] = vecNorm(vec)
+	}
+
 	return idx
 }
 
 // Search returns the top-k most similar nodes to the query string.
 // Results are sorted by similarity descending.
+// Uses pre-computed per-document TF-IDF vectors and norms; the query is the
+// only computation that happens at search time.
 func (s *Store) Search(idx *SearchIndex, query string, topK int) []SearchResult {
 	if idx == nil || len(idx.docs) == 0 {
 		return nil
@@ -92,6 +113,10 @@ func (s *Store) Search(idx *SearchIndex, query string, topK int) []SearchResult 
 	queryTerms := tokenize(query)
 	queryTF := termFreq(queryTerms)
 	queryVec := tfidfVector(queryTF, idx.idf)
+	queryNorm := vecNorm(queryVec)
+	if queryNorm == 0 {
+		return nil // query contains no indexed terms
+	}
 
 	type scored struct {
 		id    string
@@ -99,10 +124,18 @@ func (s *Store) Search(idx *SearchIndex, query string, topK int) []SearchResult 
 	}
 	var candidates []scored
 
-	for id, tf := range idx.docs {
-		docVec := tfidfVector(tf, idx.idf)
-		sim := cosineSimilarity(queryVec, docVec)
-		if sim > 0.01 { // threshold: ignore near-zero similarity
+	for id, docVec := range idx.vecs {
+		// Dot product of query with pre-computed document vector.
+		dot := 0.0
+		for term, qv := range queryVec {
+			if dv, ok := docVec[term]; ok {
+				dot += qv * dv
+			}
+		}
+		docNorm := idx.norms[id]
+		if docNorm == 0 { continue }
+		sim := dot / (queryNorm * docNorm)
+		if sim > 0.01 {
 			candidates = append(candidates, scored{id, sim})
 		}
 	}
@@ -248,4 +281,37 @@ func vecNorm(v map[string]float64) float64 {
 	sum := 0.0
 	for _, val := range v { sum += val * val }
 	return math.Sqrt(sum)
+}
+
+// CachedSearch returns the top-k results for query using a lazily rebuilt
+// search index. The index is rebuilt on the first call after any write;
+// subsequent reads return instantly from the cache.
+//
+// This replaces the pattern of calling BuildSearchIndex() + Search() on every
+// HTTP request, which scales as O(n) per request and dominates latency at 10k+
+// beliefs.
+func (s *Store) CachedSearch(query string, topK int) []SearchResult {
+	s.mu.RLock()
+	if !s.searchDirty && s.searchIndex != nil {
+		idx := s.searchIndex
+		s.mu.RUnlock()
+		return s.Search(idx, query, topK)
+	}
+	s.mu.RUnlock()
+
+	// Rebuild outside the read lock (BuildSearchIndex takes its own read lock).
+	idx := s.BuildSearchIndex()
+
+	s.mu.Lock()
+	s.searchIndex = idx
+	s.searchDirty = false
+	s.mu.Unlock()
+
+	return s.Search(idx, query, topK)
+}
+
+// invalidateSearch marks the search index cache as dirty.
+// Must be called under s.mu.Lock() by any write that adds or removes indexable content.
+func (s *Store) invalidateSearch() {
+	s.searchDirty = true
 }

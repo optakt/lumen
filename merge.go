@@ -97,6 +97,7 @@ func (s *Store) MergeBeliefs(beliefAID, beliefBID, mergedID, content, frame, met
 				b.State = BeliefSuperseded
 			}
 		}
+		s.invalidateConflicts()
 		s.mu.Unlock()
 		retired = []string{beliefAID, beliefBID}
 	}
@@ -173,35 +174,57 @@ func (s *Store) FindMergeCandidates(threshold int, now time.Time) []MergeCandida
 	}
 	s.mu.RUnlock()
 
-	var candidates []MergeCandidate
-	for i := 0; i < len(beliefs); i++ {
-		for j := i + 1; j < len(beliefs); j++ {
-			a, b := beliefs[i], beliefs[j]
-			if a.frame != b.frame { continue }
-			// Only active beliefs are merge candidates. Suspect beliefs have
-			// integrity problems; superseded beliefs were already merged or
-			// contracted — proposing them again loops forever.
-			if a.state != BeliefActive || b.state != BeliefActive { continue }
-			// Content length within 2x. Guard zero lengths: 0/0 is NaN, which
-			// passes both comparisons below and lets empty beliefs through.
-			if a.contentLen == 0 || b.contentLen == 0 { continue }
-			ratio := float64(a.contentLen) / float64(b.contentLen)
-			if ratio < 0.5 || ratio > 2.0 { continue }
-			// Entity co-mention
-			co := s.Entities.CoMentionedBetween(a.id, b.id)
-			if len(co) < threshold { continue }
-			// Different derivation chains
-			if derivationIdentical(a.derivation, b.derivation) { continue }
+	// Build a lookup for O(1) belief-snap access by ID.
+	beliefByID := make(map[string]int, len(beliefs))
+	for i, b := range beliefs {
+		beliefByID[b.id] = i
+	}
 
-			candidates = append(candidates, MergeCandidate{
-				BeliefA:      a.id,
-				BeliefB:      b.id,
-				SharedEntities: co,
-				Frame:        a.frame,
-				ConfidenceA:  a.confidence,
-				ConfidenceB:  b.confidence,
-			})
+	// Inverted entity → belief-node snapshot: same approach as ConflictScan,
+	// avoiding the O(n²) × CoMentionedBetween pattern.
+	entityNodes := s.Entities.EntitySnapshot()
+
+	type pairKey [2]string
+	// pairShared accumulates shared entities per candidate pair.
+	pairShared := make(map[pairKey][]string)
+	for entityID, nodes := range entityNodes {
+		var bids []string
+		for _, nid := range nodes {
+			if _, ok := beliefByID[nid]; ok {
+				bids = append(bids, nid)
+			}
 		}
+		if len(bids) < 2 { continue }
+		for i := 0; i < len(bids); i++ {
+			for j := i + 1; j < len(bids); j++ {
+				a, b := bids[i], bids[j]
+				if a > b { a, b = b, a }
+				pairShared[pairKey{a, b}] = append(pairShared[pairKey{a, b}], entityID)
+			}
+		}
+	}
+
+	var candidates []MergeCandidate
+	for pk, co := range pairShared {
+		if len(co) < threshold { continue }
+		ai, aok := beliefByID[pk[0]]
+		bi, bok := beliefByID[pk[1]]
+		if !aok || !bok { continue }
+		a, b := beliefs[ai], beliefs[bi]
+		if a.frame != b.frame { continue }
+		if a.state != BeliefActive || b.state != BeliefActive { continue }
+		if a.contentLen == 0 || b.contentLen == 0 { continue }
+		ratio := float64(a.contentLen) / float64(b.contentLen)
+		if ratio < 0.5 || ratio > 2.0 { continue }
+		if derivationIdentical(a.derivation, b.derivation) { continue }
+		candidates = append(candidates, MergeCandidate{
+			BeliefA:        a.id,
+			BeliefB:        b.id,
+			SharedEntities: co,
+			Frame:          a.frame,
+			ConfidenceA:    a.confidence,
+			ConfidenceB:    b.confidence,
+		})
 	}
 	sort.Slice(candidates, func(i, j int) bool {
 		return len(candidates[i].SharedEntities) > len(candidates[j].SharedEntities)

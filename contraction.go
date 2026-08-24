@@ -174,6 +174,8 @@ func (s *Store) ApplyContraction(result *ContractionResult, reason string, now t
 	rec.Retracted = true
 	rec.RetractedAt = now
 	rec.RetractReason = reason
+	s.invalidateConflicts()
+	s.invalidateSearch()
 
 	// Remove beliefs and clean up all four graphs + dependents index.
 	// Fable review 2.1: ApplyContraction previously left dangling edges in

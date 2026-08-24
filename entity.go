@@ -144,6 +144,23 @@ func (g *EntityGraph) EntitiesForNode(nodeID string) []string {
 	return result
 }
 
+// EntitySnapshot returns a snapshot of the entity→nodes mapping for use in
+// bulk co-mention analysis. The caller owns the returned map; the EntityGraph
+// is not locked during the caller's analysis.
+func (g *EntityGraph) EntitySnapshot() map[string][]string {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	out := make(map[string][]string, len(g.entityToNodes))
+	for entityID, nodes := range g.entityToNodes {
+		ids := make([]string, 0, len(nodes))
+		for nodeID := range nodes {
+			ids = append(ids, nodeID)
+		}
+		out[entityID] = ids
+	}
+	return out
+}
+
 // CoMentioned returns node IDs that share at least `minShared` entities with the given node.
 // Excludes the node itself. Results are sorted by shared count (descending).
 func (g *EntityGraph) CoMentioned(nodeID string, minShared int) []struct {

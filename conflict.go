@@ -39,7 +39,25 @@ type Conflict struct {
 
 // ConflictScan scans the store for potential conflicts and returns them
 // sorted by strength descending.
+//
+// Results are cached and only recomputed when the belief set has changed
+// since the last call. The cache is invalidated by any write to beliefs or
+// records. This keeps the call O(1) after the first scan in steady state,
+// which matters because BeliefHealth and StoreHealth both call it.
 func (s *Store) ConflictScan(now time.Time) []Conflict {
+	s.mu.RLock()
+	if !s.conflictDirty {
+		cached := make([]Conflict, len(s.conflictCache))
+		copy(cached, s.conflictCache)
+		s.mu.RUnlock()
+		return cached
+	}
+	s.mu.RUnlock()
+
+	// Recompute outside the lock (snapshot approach): this avoids holding
+	// the lock across the O(n²) scan. A concurrent write may invalidate
+	// again before we store the result; we accept that (the result is still
+	// correct for the snapshot we took).
 	s.mu.RLock()
 	// Snapshot belief IDs and contents for analysis outside the lock
 	type snap struct {
@@ -76,83 +94,99 @@ func (s *Store) ConflictScan(now time.Time) []Conflict {
 		})
 	}
 
-	// Signal 2: negation proximity + entity co-mention
+	// Signals 2 & 3: entity-based checks — negation proximity and confidence divergence.
+	//
+	// Old approach: O(n²) pair loop with CoMentionedBetween (2 lock acquisitions +
+	// set intersection) in each inner body — O(n² × e × locks).
+	//
+	// New approach: snapshot the entity→nodes inverted index once, then iterate over
+	// entities. For each entity, only the O(k²) pairs among the k beliefs that mention
+	// it need to be considered. Because k << n in practice, the total work is O(entities × k²)
+	// instead of O(n²). The co-mention map is built in the same pass, eliminating the
+	// per-pair CoMentionedBetween call entirely.
 	negationMarkers := []string{
 		"not ", "no ", "cannot ", "fails to ", "does not ", "is not ",
 		"are not ", "neither ", "without ", "lack", "absent", "impossible",
 		"unconfirmed", "refuted", "rejected", "inconsistent",
 	}
-	for i := 0; i < len(beliefs); i++ {
-		for j := i + 1; j < len(beliefs); j++ {
-			a, b := beliefs[i], beliefs[j]
-			// Skip same-frame-different-subject pairs with no entity overlap
-			co := s.Entities.CoMentionedBetween(a.id, b.id)
-			if len(co) == 0 {
-				continue
+
+	// Build belief lookup for O(1) snap access.
+	belief := make(map[string]int, len(beliefs))
+	for i, b := range beliefs {
+		belief[b.id] = i
+	}
+
+	// Inverted index snapshot: entity → belief node IDs that mention it.
+	entityNodes := s.Entities.EntitySnapshot()
+
+	// pairShared accumulates shared-entity names per ordered pair (a < b lexicographically).
+	type pairKey [2]string
+	pairShared := make(map[pairKey][]string)
+	for entityID, nodes := range entityNodes {
+		// Only belief nodes (those present in our snapshot) are relevant.
+		var bids []string
+		for _, nid := range nodes {
+			if _, ok := belief[nid]; ok {
+				bids = append(bids, nid)
 			}
-
-			// Check if one contains a negation of terms prominent in the other
-			aLower := strings.ToLower(a.content)
-			bLower := strings.ToLower(b.content)
-			aNegates := containsNegationOf(aLower, bLower, negationMarkers)
-			bNegates := containsNegationOf(bLower, aLower, negationMarkers)
-
-			if aNegates || bNegates {
-				strength := 0.6 + 0.2*float64(len(co)) // more shared entities = stronger signal
-				if strength > 0.95 { strength = 0.95 }
-				direction := a.id + " negates aspects of " + b.id
-				if bNegates {
-					direction = b.id + " negates aspects of " + a.id
-				}
-				conflicts = append(conflicts, Conflict{
-					BeliefA:  a.id,
-					BeliefB:  b.id,
-					Strength: strength,
-					Kind:     "negation",
-					Explanation: fmt.Sprintf(
-						"%s. Shared entities: %s.",
-						direction, strings.Join(co, ", "),
-					),
-				})
+		}
+		if len(bids) < 2 {
+			continue // no pair can form from a single node
+		}
+		for i := 0; i < len(bids); i++ {
+			for j := i + 1; j < len(bids); j++ {
+				a, b := bids[i], bids[j]
+				if a > b { a, b = b, a } // canonical order
+				pairShared[pairKey{a, b}] = append(pairShared[pairKey{a, b}], entityID)
 			}
 		}
 	}
 
-	// Signal 3: confidence divergence on shared entities
-	for i := 0; i < len(beliefs); i++ {
-		for j := i + 1; j < len(beliefs); j++ {
-			a, b := beliefs[i], beliefs[j]
-			co := s.Entities.CoMentionedBetween(a.id, b.id)
-			if len(co) == 0 {
-				continue
-			}
-			// Flag if one is very high confidence and the other very low
-			// for the same topic — asymmetric certainty about the same subject
+	// Declared-conflict set for deduplication.
+	type pairSet map[pairKey]bool
+	alreadyCaught := make(pairSet)
+	for _, c := range conflicts {
+		a, b := c.BeliefA, c.BeliefB
+		if a > b { a, b = b, a }
+		alreadyCaught[pairKey{a, b}] = true
+	}
+
+	for pk, co := range pairShared {
+		// Recover snapped belief data via the index built above.
+		ai, aok := belief[pk[0]]
+		bi, bok := belief[pk[1]]
+		if !aok || !bok { continue }
+		a, b := beliefs[ai], beliefs[bi]
+
+		aLower := strings.ToLower(a.content)
+		bLower := strings.ToLower(b.content)
+		aNegates := containsNegationOf(aLower, bLower, negationMarkers)
+		bNegates := containsNegationOf(bLower, aLower, negationMarkers)
+
+		if aNegates || bNegates {
+			strength := 0.6 + 0.2*float64(len(co))
+			if strength > 0.95 { strength = 0.95 }
+			direction := a.id + " negates aspects of " + b.id
+			if bNegates { direction = b.id + " negates aspects of " + a.id }
+			conflicts = append(conflicts, Conflict{
+				BeliefA: a.id, BeliefB: b.id, Strength: strength, Kind: "negation",
+				Explanation: fmt.Sprintf("%s. Shared entities: %s.", direction, strings.Join(co, ", ")),
+			})
+			alreadyCaught[pk] = true
+		}
+
+		if !alreadyCaught[pk] {
 			diff := math.Abs(a.confidence - b.confidence)
 			if diff >= 0.5 && (a.confidence >= 0.8 || b.confidence >= 0.8) {
-				// Only flag if not already caught by negation
-				alreadyCaught := false
-				for _, c := range conflicts {
-					if (c.BeliefA == a.id && c.BeliefB == b.id) ||
-						(c.BeliefA == b.id && c.BeliefB == a.id) {
-						alreadyCaught = true
-						break
-					}
-				}
-				if !alreadyCaught {
-					strength := 0.3 + 0.3*(diff-0.5)/0.5 // scales 0.3–0.6 over diff 0.5–1.0
-					conflicts = append(conflicts, Conflict{
-						BeliefA:  a.id,
-						BeliefB:  b.id,
-						Strength: strength,
-						Kind:     "divergence",
-						Explanation: fmt.Sprintf(
-							"Confidence divergence of %.0f%% on shared entities (%s): %s=%.0f%%, %s=%.0f%%.",
-							diff*100, strings.Join(co, ", "),
-							a.id, a.confidence*100, b.id, b.confidence*100,
-						),
-					})
-				}
+				strength := 0.3 + 0.3*(diff-0.5)/0.5
+				conflicts = append(conflicts, Conflict{
+					BeliefA: a.id, BeliefB: b.id, Strength: strength, Kind: "divergence",
+					Explanation: fmt.Sprintf(
+						"Confidence divergence of %.0f%% on shared entities (%s): %s=%.0f%%, %s=%.0f%%.",
+						diff*100, strings.Join(co, ", "),
+						a.id, a.confidence*100, b.id, b.confidence*100,
+					),
+				})
 			}
 		}
 	}
@@ -162,7 +196,20 @@ func (s *Store) ConflictScan(now time.Time) []Conflict {
 		return conflicts[i].Strength > conflicts[j].Strength
 	})
 
+	// Cache the result.
+	s.mu.Lock()
+	s.conflictCache = conflicts
+	s.conflictDirty = false
+	s.mu.Unlock()
+
 	return conflicts
+}
+
+// invalidateConflicts marks the conflict cache as dirty.
+// Must be called under s.mu.Lock() by any write path that changes beliefs or
+// records (confidence changes, additions, retractions, contractions).
+func (s *Store) invalidateConflicts() {
+	s.conflictDirty = true
 }
 
 // containsNegationOf checks whether text A contains a negation marker
