@@ -146,6 +146,11 @@ type Belief struct {
 	ImportedDecay []DecayPolicy       // decay policies carried in from foreign frames (legacy)
 	DecayOverride *DecayPolicy        // per-belief override; nil means use frame default
 	CrossFrame    []CrossFrameSource  // snapshots of cross-frame sources at assertion time
+
+	// Bayesian composition metadata — present when BelieveComposed was used.
+	// Enables sensitivity analysis in FragilityScan and survives BoltDB round-trips.
+	CompositionPrior    float64    // prior confidence before evidence
+	CompositionEvidence []Evidence // evidence blocks used to compute the posterior
 }
 
 // CurrentConfidence returns the confidence adjusted for elapsed decay.

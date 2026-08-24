@@ -20,12 +20,28 @@ import (
 // ─── Routes (called from routes()) ───────────────────────────────────────────
 
 func (s *Server) routeSelf() {
-	s.mux.HandleFunc("POST /self/claim",              s.handleSelfClaim)
-	s.mux.HandleFunc("POST /self/correct",            s.handleSelfCorrect)
-	s.mux.HandleFunc("GET /self/claims",              s.handleSelfList)
-	s.mux.HandleFunc("GET /self/context",             s.handleSelfContext)
-	s.mux.HandleFunc("GET /self/biography/{id}",      s.handleSelfBiography)
-	s.mux.HandleFunc("GET /self/frame-report",        s.handleSelfFrameReport)
+	// Versioned self-model routes.
+	s.mux.HandleFunc("POST /v1/self/claim",              s.handleSelfClaim)
+	s.mux.HandleFunc("POST /v1/self/correct",            s.handleSelfCorrect)
+	s.mux.HandleFunc("GET /v1/self/claims",              s.handleSelfList)
+	s.mux.HandleFunc("GET /v1/self/context",             s.handleSelfContext)
+	s.mux.HandleFunc("GET /v1/self/biography/{id}",      s.handleSelfBiography)
+	s.mux.HandleFunc("GET /v1/self/frame-report",        s.handleSelfFrameReport)
+
+	// Legacy redirects for self-model routes.
+	for _, pair := range []struct{ from, to string }{
+		{"POST /self/claim",          "/v1/self/claim"},
+		{"POST /self/correct",        "/v1/self/correct"},
+		{"GET /self/claims",          "/v1/self/claims"},
+		{"GET /self/context",         "/v1/self/context"},
+		{"GET /self/biography/{id}",  "/v1/self/biography/{id}"},
+		{"GET /self/frame-report",    "/v1/self/frame-report"},
+	} {
+		pair := pair
+		s.mux.HandleFunc(pair.from, func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, pair.to, http.StatusMovedPermanently)
+		})
+	}
 }
 
 // ─── Handlers ────────────────────────────────────────────────────────────────

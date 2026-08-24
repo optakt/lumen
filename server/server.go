@@ -77,14 +77,32 @@ func New(cfg Config, logger *slog.Logger) (*Server, error) {
 }
 
 func (s *Server) routes() {
-	s.mux.HandleFunc("GET /health",       s.handleHealth)
-	s.mux.HandleFunc("GET /context",      s.handleContext)
-	s.mux.HandleFunc("GET /beliefs",      s.handleListBeliefs)
-	s.mux.HandleFunc("POST /records",     s.handleAssertRecord)
-	s.mux.HandleFunc("POST /believe",     s.handleBelieve)
-	s.mux.HandleFunc("POST /retract",     s.handleRetract)
-	s.mux.HandleFunc("POST /ingest",      s.handleIngest)
-	s.mux.HandleFunc("GET /explain/{id}", s.handleExplain)
+	// Versioned routes (stable API).
+	s.mux.HandleFunc("GET /v1/health",         s.handleHealth)
+	s.mux.HandleFunc("GET /v1/context",        s.handleContext)
+	s.mux.HandleFunc("GET /v1/beliefs",        s.handleListBeliefs)
+	s.mux.HandleFunc("POST /v1/records",       s.handleAssertRecord)
+	s.mux.HandleFunc("POST /v1/believe",       s.handleBelieve)
+	s.mux.HandleFunc("POST /v1/retract",       s.handleRetract)
+	s.mux.HandleFunc("POST /v1/ingest",        s.handleIngest)
+	s.mux.HandleFunc("GET /v1/explain/{id}",   s.handleExplain)
+
+	// Legacy redirects — keep existing integrations working.
+	for _, pair := range []struct{ from, to string }{
+		{"GET /health",       "/v1/health"},
+		{"GET /context",      "/v1/context"},
+		{"GET /beliefs",      "/v1/beliefs"},
+		{"POST /records",     "/v1/records"},
+		{"POST /believe",     "/v1/believe"},
+		{"POST /retract",     "/v1/retract"},
+		{"POST /ingest",      "/v1/ingest"},
+		{"GET /explain/{id}", "/v1/explain/{id}"},
+	} {
+		pair := pair
+		s.mux.HandleFunc(pair.from, func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, pair.to, http.StatusMovedPermanently)
+		})
+	}
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {

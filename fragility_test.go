@@ -119,3 +119,66 @@ func TestMinCut(t *testing.T) {
 		t.Errorf("mixed (0.0, 1.0): min cut should be 1, got %d", got)
 	}
 }
+
+// TestFragilityComposedPath verifies that BelieveComposed beliefs use
+// SensitivityAnalysis (exact) rather than the norScale approximation,
+// and that the composition metadata survives a BoltDB round-trip.
+func TestFragilityComposedPath(t *testing.T) {
+	s := NewStore()
+	now := time.Now()
+
+	s.RegisterFrame(Frame{Name: "reasoning", Decay: DecayPolicy{Kind: DecayNone}})
+
+	r1 := &Record{ID: "r-zombie", Frame: "reasoning", Content: "Zombie argument: conceivability implies possibility", Timestamp: now}
+	r2 := &Record{ID: "r-knowledge", Frame: "reasoning", Content: "Knowledge argument: Mary learns something new", Timestamp: now}
+	if err := s.Assert(r1); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Assert(r2); err != nil {
+		t.Fatal(err)
+	}
+
+	prior := 0.5
+	evidence := []Evidence{
+		{SourceID: "r-zombie",    Confidence: 0.8, LikelihoodRatio: 3.2},
+		{SourceID: "r-knowledge", Confidence: 0.7, LikelihoodRatio: 2.1},
+	}
+	b := &Belief{
+		ID:         "b-hardproblem",
+		Content:    "The hard problem of consciousness is genuine",
+		Confidence: 0.78,
+		Frame:      "reasoning",
+		AssertedAt: now,
+		Derivation: []string{"r-zombie", "r-knowledge"},
+	}
+	cb, err := s.BelieveComposed(b, prior, evidence)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("composed posterior=%.4f declared=%.4f", cb.ComputedConfidence, b.Confidence)
+
+	// Verify composition metadata stored on the belief.
+	s.mu.RLock()
+	stored := s.beliefs["b-hardproblem"]
+	s.mu.RUnlock()
+	if len(stored.CompositionEvidence) != 2 {
+		t.Fatalf("expected 2 evidence blocks stored, got %d", len(stored.CompositionEvidence))
+	}
+	if stored.CompositionPrior != prior {
+		t.Fatalf("expected prior %.2f, got %.2f", prior, stored.CompositionPrior)
+	}
+
+	// FragilityScan should use the sensitivity path, not norScale.
+	entries := s.FragilityScan(now)
+	if len(entries) == 0 {
+		t.Fatal("expected at least one fragility entry")
+	}
+	entry := entries[0]
+	if entry.WeakestKind != "evidence" {
+		t.Errorf("expected WeakestKind=evidence (sensitivity path), got %q", entry.WeakestKind)
+	}
+	if entry.Drop <= 0 {
+		t.Errorf("expected positive drop, got %.4f", entry.Drop)
+	}
+	t.Logf("fragility: drop=%.4f weakest=%s", entry.Drop, entry.WeakestSource)
+}

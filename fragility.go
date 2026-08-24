@@ -46,6 +46,7 @@ func (s *Store) FragilityScan(now time.Time) []FragilityEntry {
 		conf        float64
 		state       BeliefState
 		derivation  []string
+		belief      *Belief  // pointer for composition metadata access
 	}
 	var beliefs []snap
 	for id, b := range s.beliefs {
@@ -60,6 +61,7 @@ func (s *Store) FragilityScan(now time.Time) []FragilityEntry {
 			conf:       b.CurrentConfidence(frame, now),
 			state:      b.State,
 			derivation: append([]string{}, b.Derivation...),
+			belief:     b,
 		})
 	}
 	s.mu.RUnlock()
@@ -69,7 +71,7 @@ func (s *Store) FragilityScan(now time.Time) []FragilityEntry {
 		if len(b.derivation) == 0 {
 			continue
 		}
-		entry := s.fragEntryFor(b.id, b.content, b.conf, b.derivation, b.frame, now)
+		entry := s.fragEntryFor(b.id, b.content, b.conf, b.derivation, b.frame, now, b.belief)
 		if entry != nil {
 			entries = append(entries, *entry)
 		}
@@ -93,10 +95,43 @@ type sourceConf struct {
 }
 
 // fragEntryFor computes the fragility entry for one belief.
-func (s *Store) fragEntryFor(beliefID, content string, currentConf float64, derivation []string, frame Frame, now time.Time) *FragilityEntry {
+//
+// Two paths:
+//   - Composed beliefs (CompositionEvidence present): sensitivity analysis via
+//     BayesianCompose, recomputing the posterior with each evidence source removed.
+//     This is exact given the stored prior and evidence.
+//   - Derived beliefs (no composition metadata): proportional decay approximation.
+//     Models confidence as NoisyOr(sources) * decay_factor, where decay_factor =
+//     current / NoisyOr(all sources). Removing source k gives:
+//       estimated = NoisyOr(sources \ {k}) / NoisyOr(sources) * current
+//     Valid when confidence is monotonically proportional to source noisy-or and
+//     decay applies uniformly regardless of source composition (both hold in practice).
+func (s *Store) fragEntryFor(beliefID, content string, currentConf float64, derivation []string, frame Frame, now time.Time, b *Belief) *FragilityEntry {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
+	// Path 1: Bayesian-composed belief — use sensitivity analysis (exact).
+	if b != nil && len(b.CompositionEvidence) > 0 {
+		sens, err := SensitivityAnalysis(b.CompositionPrior, b.CompositionEvidence, currentConf)
+		if err == nil && len(sens.Sources) > 0 {
+			worst := sens.Sources[0] // ranked by |MarginalContribution| descending
+			drop := worst.MarginalContribution
+			if drop < 0 { drop = -drop }
+			return &FragilityEntry{
+				BeliefID:      beliefID,
+				BeliefContent: content,
+				CurrentConf:   currentConf,
+				WeakestSource: worst.SourceID,
+				WeakestKind:   "evidence",
+				ConfWithout:   worst.PosteriorWithout,
+				Drop:          drop,
+				TotalSources:  len(b.CompositionEvidence),
+				MinCut:        1, // removing the worst evidence block is the min cut
+			}
+		}
+	}
+
+	// Path 2: Derived belief — proportional decay approximation.
 	var sources []sourceConf
 	for _, srcID := range derivation {
 		if rec, ok := s.records[srcID]; ok {
@@ -115,8 +150,6 @@ func (s *Store) fragEntryFor(beliefID, content string, currentConf float64, deri
 		return nil
 	}
 
-	// Find the source whose removal causes the largest drop.
-	// Estimate: noisy-or of remaining sources, scaled by their own confidence.
 	worstID   := sources[0].id
 	worstKind := sources[0].kind
 	worstRemConf := estimateWithout(sources, 0, currentConf)
@@ -135,9 +168,6 @@ func (s *Store) fragEntryFor(beliefID, content string, currentConf float64, deri
 		drop = 0
 	}
 
-	// Compute minimum cut: how many sources must be removed to reach zero confidence.
-	// If any single source removal drops to zero, MinCut = 1.
-	// Otherwise count sources required until noisy-or of remainder reaches zero.
 	minCut := computeMinCut(sources, currentConf)
 
 	return &FragilityEntry{

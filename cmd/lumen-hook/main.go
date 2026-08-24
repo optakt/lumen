@@ -77,7 +77,7 @@ func handlePreLLM(client *http.Client, baseURL string, maxBeliefs int, minConf f
 	var parts []string
 
 	// General belief context.
-	u, _ := url.Parse(baseURL + "/context")
+	u, _ := url.Parse(baseURL + "/v1/context")
 	q := u.Query()
 	q.Set("max", strconv.Itoa(maxBeliefs))
 	q.Set("min_confidence", fmt.Sprintf("%.2f", minConf))
