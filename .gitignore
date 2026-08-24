@@ -1,0 +1,25 @@
+# Compiled binaries (top-level only)
+/lumen-db
+/lumen
+/archaeology
+/audit
+/calibrate
+/analyze
+/timeline
+/tokenize
+/philos
+
+# Test artifacts
+*.db
+*.dot
+*.svg
+
+# Go
+*.test
+*.out
+/vendor/
+
+# Editor
+.idea/
+.vscode/
+*.swp
