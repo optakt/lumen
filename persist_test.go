@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 	"time"
+
 )
 
 func TestSaveAndLoadStore(t *testing.T) {
@@ -193,4 +194,184 @@ func TestPersistNewFields(t *testing.T) {
 
 	t.Logf("all new fields survive BoltDB round-trip: OnStaleDerivation=%q Foundational=%v ContractedBy=%q",
 		frame.OnStaleDerivation, rec.Foundational, b.ContractedBy)
+}
+
+// TestPersistCompositionFields verifies that BelieveComposed metadata
+// (CompositionPrior, CompositionEvidence) survives a BoltDB round-trip.
+// Without this, FragilityScan loses the exact sensitivity path after restart.
+func TestPersistCompositionFields(t *testing.T) {
+	dbPath := t.TempDir() + "/test.db"
+	db, err := OpenDB(dbPath)
+	if err != nil { t.Fatal(err) }
+	t.Cleanup(func() { db.Close() })
+	s := NewStore()
+	now := time.Now()
+	s.RegisterFrame(Frame{Name: "reasoning", Decay: DecayPolicy{Kind: DecayNone}})
+
+	if err := s.Assert(&Record{ID: "r-src", Frame: "reasoning", Content: "source record", Timestamp: now}); err != nil {
+		t.Fatal(err)
+	}
+	evidence := []Evidence{{SourceID: "r-src", Confidence: 0.9, LikelihoodRatio: 4.0}}
+	b := &Belief{
+		ID: "b-comp", Frame: "reasoning", Content: "composed claim",
+		Confidence: 0.8, AssertedAt: now, Derivation: []string{"r-src"},
+	}
+	if _, err := s.BelieveComposed(b, 0.5, evidence); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := SaveStore(s, db); err != nil {
+		t.Fatal(err)
+	}
+
+	s2, err := LoadStore(db, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s2.mu.RLock()
+	loaded := s2.beliefs["b-comp"]
+	s2.mu.RUnlock()
+	if loaded == nil {
+		t.Fatal("composed belief lost after BoltDB round-trip")
+	}
+	if loaded.CompositionPrior != 0.5 {
+		t.Errorf("CompositionPrior: want 0.5, got %g", loaded.CompositionPrior)
+	}
+	if len(loaded.CompositionEvidence) != 1 {
+		t.Fatalf("CompositionEvidence: want 1 block, got %d", len(loaded.CompositionEvidence))
+	}
+	if loaded.CompositionEvidence[0].SourceID != "r-src" {
+		t.Errorf("evidence source: want r-src, got %s", loaded.CompositionEvidence[0].SourceID)
+	}
+	if loaded.CompositionEvidence[0].LikelihoodRatio != 4.0 {
+		t.Errorf("LR: want 4.0, got %g", loaded.CompositionEvidence[0].LikelihoodRatio)
+	}
+	// FragilityScan must use the exact path after reload.
+	entries := s2.FragilityScan(now)
+	found := false
+	for _, e := range entries {
+		if e.BeliefID == "b-comp" && e.WeakestKind == "evidence" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("FragilityScan did not use exact sensitivity path after BoltDB reload")
+	}
+}
+
+// TestPersistCrossFrameFields verifies CrossFrame snapshots survive BoltDB.
+// Without this, the retrodiction fix is undone after a restart: reloaded
+// beliefs would fall back to the legacy ImportedDecay path and compound decay
+// from the original source frame.
+func TestPersistCrossFrameFields(t *testing.T) {
+	dbPath := t.TempDir() + "/test.db"
+	db, err := OpenDB(dbPath)
+	if err != nil { t.Fatal(err) }
+	t.Cleanup(func() { db.Close() })
+	s := NewStore()
+	now := time.Now()
+	s.RegisterFrame(Frame{Name: "empirical", Decay: DecayPolicy{Kind: DecayExponential, Halflife: 365 * 24 * time.Hour}})
+	s.RegisterFrame(Frame{Name: "reasoning", Decay: DecayPolicy{Kind: DecayExponential, Halflife: 1825 * 24 * time.Hour}})
+
+	if err := s.Assert(&Record{ID: "r1", Frame: "empirical", Content: "empirical finding", Timestamp: now}); err != nil {
+		t.Fatal(err)
+	}
+	srcBelief := &Belief{
+		ID: "b-empirical", Frame: "empirical", Content: "empirical belief",
+		Confidence: 0.8, AssertedAt: now, Derivation: []string{"r1"},
+	}
+	if err := s.Believe(srcBelief); err != nil {
+		t.Fatal(err)
+	}
+	derived := &Belief{
+		ID: "b-reasoning", Frame: "reasoning", Content: "reasoning derived from empirical",
+		Confidence: 0.75, AssertedAt: now, Derivation: []string{"b-empirical"},
+	}
+	if err := s.Believe(derived); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify cross-frame snapshot was captured.
+	s.mu.RLock()
+	bf := s.beliefs["b-reasoning"]
+	nCrossFrame := len(bf.CrossFrame)
+	s.mu.RUnlock()
+	if nCrossFrame == 0 {
+		t.Fatal("CrossFrame not captured at assertion time")
+	}
+
+	if err := SaveStore(s, db); err != nil {
+		t.Fatal(err)
+	}
+	s2, err := LoadStore(db, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s2.mu.RLock()
+	loaded := s2.beliefs["b-reasoning"]
+	s2.mu.RUnlock()
+	if loaded == nil {
+		t.Fatal("cross-frame belief lost")
+	}
+	if len(loaded.CrossFrame) != nCrossFrame {
+		t.Errorf("CrossFrame length: want %d, got %d", nCrossFrame, len(loaded.CrossFrame))
+	}
+	if loaded.CrossFrame[0].SourceFrame != "empirical" {
+		t.Errorf("CrossFrame source frame: want empirical, got %s", loaded.CrossFrame[0].SourceFrame)
+	}
+}
+
+// TestPersistDecayOverride verifies per-belief decay overrides survive BoltDB.
+func TestPersistDecayOverride(t *testing.T) {
+	dbPath := t.TempDir() + "/test.db"
+	db, err := OpenDB(dbPath)
+	if err != nil { t.Fatal(err) }
+	t.Cleanup(func() { db.Close() })
+	s := NewStore()
+	now := time.Now()
+	s.RegisterFrame(Frame{Name: "reasoning", Decay: DecayPolicy{Kind: DecayExponential, Halflife: 365 * 24 * time.Hour}})
+	if err := s.Assert(&Record{ID: "r-base", Frame: "reasoning", Content: "base record", Timestamp: now}); err != nil {
+		t.Fatal(err)
+	}
+	override := DecayPolicy{Kind: DecayLinear, Rate: 0.01}
+	b := &Belief{
+		ID: "b-override", Frame: "reasoning", Content: "belief with custom decay",
+		Confidence: 0.9, AssertedAt: now, Derivation: []string{"r-base"},
+		DecayOverride: &override,
+	}
+	if err := s.Believe(b); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveStore(s, db); err != nil {
+		t.Fatal(err)
+	}
+	s2, err := LoadStore(db, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s2.mu.RLock()
+	loaded := s2.beliefs["b-override"]
+	s2.mu.RUnlock()
+	if loaded == nil {
+		t.Fatal("belief with decay override lost")
+	}
+	if loaded.DecayOverride == nil {
+		t.Fatal("DecayOverride lost after BoltDB round-trip")
+	}
+	if loaded.DecayOverride.Kind != DecayLinear {
+		t.Errorf("DecayOverride.Kind: want DecayLinear, got %v", loaded.DecayOverride.Kind)
+	}
+	if loaded.DecayOverride.Rate != 0.01 {
+		t.Errorf("DecayOverride.Rate: want 0.01, got %g", loaded.DecayOverride.Rate)
+	}
+	// Confidence must use the override at read time, not the frame's policy.
+	elapsed := 100 * 24 * time.Hour
+	conf := loaded.CurrentConfidence(s2.frames["reasoning"], now.Add(elapsed))
+	expected := 0.9 - 0.01*100 // linear: rate per day
+	if conf < 0 { expected = 0 }
+	if abs := conf - expected; abs > 0.001 && abs < -0.001 {
+		t.Errorf("DecayOverride not applied: want ~%.3f, got %.3f", expected, conf)
+	}
 }
