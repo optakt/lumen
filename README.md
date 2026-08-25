@@ -41,7 +41,7 @@ Inside the REPL:
 
 Beliefs are declared in `.lm` files:
 
-```lm
+```lumen
 frame empirical
     decay: exponential halflife: 5y
 
@@ -49,23 +49,22 @@ frame philosophical
     decay: none
 
 record chalmers-1995 in philosophical
-    content: "The hard problem of consciousness is real."
-    timestamp: "1995-01-01"
+    "The hard problem of consciousness is real."
+    at: "1995-01-01"
 
 record cogitate-2023 in empirical
-    content: "Cogitate Consortium: prefrontal cortex not necessary for consciousness."
-    timestamp: "2023-06-01"
+    "Cogitate Consortium: prefrontal cortex not necessary for consciousness."
+    at: "2023-06-01"
 
 believe hard-problem in philosophical
+    "The hard problem of consciousness is real."
     confidence: 0.78
-    content: "The hard problem of consciousness is real."
-    from: chalmers-1995, jackson-1982, zombie-argument, conscious-experience-exists
+    from: chalmers-1995
 
 query recent-gwt-changes
-    target: gwt-strong
+    target: hard-problem
     select: confidence-changes
     since: "2023-01-01"
-    where: change > 0.05
 ```
 
 Files are round-trippable: `export lm` produces valid `.lm` syntax that re-imports cleanly.
@@ -76,7 +75,7 @@ Files are round-trippable: `export lm` produces valid `.lm` syntax that re-impor
 
 **Belief** — a claim with a confidence value, a frame, and a derivation chain. Confidence decays according to the frame's policy. Beliefs derive from records and other beliefs.
 
-**Frame** — a named epistemic context with a decay policy (`none`, `exponential halflife: Ny`, `step after: Ny`). Evidence from one frame imported into another snapshots at the moment of import; only the receiving frame's clock applies thereafter.
+**Frame** — a named epistemic context with a decay policy (`none`, `exponential halflife: Ny`, `linear rate: R`, `step at: Ny to: V`). Evidence from one frame imported into another snapshots at the moment of import; only the receiving frame's clock applies thereafter.
 
 **Bridge** — a declared translation between incompatible frames, with explicit loss annotation and assumption tracking.
 
@@ -114,7 +113,7 @@ import "github.com/optakt/lumen"
 s := lumen.NewStore()
 s.RegisterFrame(lumen.Frame{
     Name:  "empirical",
-    Decay: lumen.DecayPolicy{Kind: "exponential", Halflife: 5 * 365 * 24 * time.Hour},
+    Decay: lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: 5 * 365 * 24 * time.Hour},
 })
 
 // Assert a record
@@ -136,7 +135,7 @@ result, _ := s.Query("b1", time.Now())
 s.Retract("r1", "paper retracted", time.Now())
 
 // What breaks if r1 is retracted?
-entries, _ := s.ImpactScan("r1", time.Now())
+entries := s.ImpactScan("r1", time.Now())
 
 // Which beliefs are most fragile?
 fragile := s.FragilityScan(time.Now())
@@ -199,6 +198,8 @@ advance <duration>   Move reference clock for decay testing (or: advance reset)
 
 ## Status
 
-Research prototype. The core epistemic model is complete and tested (223 tests). Not production-hardened: no multi-writer support, Bayesian composition metadata is not persisted across restarts, the text extraction pipeline is heuristic.
+Research prototype. The core epistemic model is complete and tested (231 tests). Not production-hardened: no multi-writer support, the text extraction pipeline is heuristic.
+
+Performance note: ConflictScan, BeliefHealth, and StoreHealth are O(1) after the first call (dirty-flag caches), but the initial scan at large store sizes (10k+ beliefs) takes ~6ms. All other hot-path operations are O(1) or O(log n). See `scale_test.go` for benchmarks.
 
 Apache 2.0 licensed.
