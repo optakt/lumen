@@ -77,6 +77,8 @@ func (s *Server) handleSelfClaim(w http.ResponseWriter, r *http.Request) {
 	id := req.ID
 	if id == "" {
 		id = newID("self:" + req.Kind)
+	} else if !strings.HasPrefix(id, "self:") {
+		id = "self:" + id
 	}
 
 	// Sentinel record — retracting this cascades suspect marking to the belief.
@@ -138,8 +140,15 @@ func (s *Server) handleSelfCorrect(w http.ResponseWriter, r *http.Request) {
 		reason = "corrected"
 	}
 
+	// Normalise the replaces_id to always carry the self: prefix so callers
+	// can use short names (e.g. "my-claim") or fully-qualified names interchangeably.
+	replacesID := req.ReplacesID
+	if !strings.HasPrefix(replacesID, "self:") {
+		replacesID = "self:" + replacesID
+	}
+
 	// Retract the prior claim's sentinel, marking it suspect.
-	if err := s.store.Retract("sentinel:"+req.ReplacesID, reason, now); err != nil {
+	if err := s.store.Retract("sentinel:"+replacesID, reason, now); err != nil {
 		writeErr(w, http.StatusNotFound, "prior claim not found: "+err.Error())
 		return
 	}
@@ -267,6 +276,9 @@ func (s *Server) handleSelfContext(w http.ResponseWriter, _ *http.Request) {
 
 func (s *Server) handleSelfBiography(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
+	if !strings.HasPrefix(id, "self:") {
+		id = "self:" + id
+	}
 	bio, err := s.store.EpistemicBiography(id, 0.05, time.Now())
 	if err != nil {
 		writeErr(w, http.StatusNotFound, err.Error())

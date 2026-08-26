@@ -254,3 +254,53 @@ func TestLegacyRedirects(t *testing.T) {
 		t.Errorf("path value not preserved: Location=%q", loc)
 	}
 }
+
+func TestSelfClaimExplicitID(t *testing.T) {
+	srv := newTestServer(t)
+
+	// Assert a claim with an explicit ID that lacks the self: prefix.
+	w := httptest.NewRecorder()
+	body := `{"id":"my-claim","kind":"asserted","content":"Explicit ID test claim","confidence":0.80,"frame":"reasoning"}`
+	req := httptest.NewRequest("POST", "/v1/self/claim", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	srv.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var result map[string]any
+	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	id, _ := result["id"].(string)
+	if id != "self:my-claim" {
+		t.Errorf("expected id=self:my-claim, got %q", id)
+	}
+
+	// The claim should appear in /v1/self/context.
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest("GET", "/v1/self/context", nil)
+	srv.ServeHTTP(w, req)
+	if !strings.Contains(w.Body.String(), "Explicit ID test claim") {
+		t.Errorf("claim not visible in context: %s", w.Body.String())
+	}
+
+	// Biography should resolve without the self: prefix too.
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest("GET", "/v1/self/biography/my-claim", nil)
+	srv.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("biography: expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// Correction should also accept the short ID.
+	w = httptest.NewRecorder()
+	corrBody := `{"replaces_id":"my-claim","content":"Corrected claim","confidence":0.85,"reason":"test correction"}`
+	req = httptest.NewRequest("POST", "/v1/self/correct", strings.NewReader(corrBody))
+	req.Header.Set("Content-Type", "application/json")
+	srv.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Errorf("correction: expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+	t.Logf("correction result: %s", w.Body.String())
+}
