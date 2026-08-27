@@ -677,6 +677,89 @@ func main() {
 			fmt.Printf("Entities: %d registered, %d mentions\n", ec, mc)
 			tc := len(store.Temporal.Timeline())
 			fmt.Printf("Temporal: %d events\n", tc)
+
+		case "snapshot":
+			// snapshot <YYYY-MM-DD> <command...>
+			// Runs a read-only command on the store as it stood at the given date.
+			// Example: snapshot 2022-01-01 list
+			//          snapshot 2022-01-01 query hard-problem
+			//          snapshot 2022-01-01 fragility
+			if len(args) < 2 {
+				fmt.Println("usage: snapshot <YYYY-MM-DD> <command> [args...]")
+				fmt.Println("       e.g. snapshot 2022-01-01 list")
+				fmt.Println("            snapshot 2022-01-01 query hard-problem")
+				fmt.Println("            snapshot 2022-01-01 fragility")
+				continue
+			}
+			snapDate, sdErr := time.Parse("2006-01-02", args[0])
+			if sdErr != nil {
+				fmt.Printf("snapshot: invalid date %q (want YYYY-MM-DD)\n", args[0])
+				continue
+			}
+			snap := store.SnapshotAt(snapDate)
+			snapBeliefs := snap.AllBeliefs(now)
+			fmt.Printf("── snapshot at %s — %d beliefs ──\n", args[0], len(snapBeliefs))
+			snapCmd  := args[1]
+			snapArgs := args[2:]
+			switch snapCmd {
+			case "list":
+				sort.Slice(snapBeliefs, func(i, j int) bool {
+					return snapBeliefs[i].CurrentConfidence > snapBeliefs[j].CurrentConfidence
+				})
+				for _, b := range snapBeliefs {
+					if b.State == lumen.BeliefSuperseded { continue }
+					stateMarker := ""
+					if b.State == lumen.BeliefSuspect { stateMarker = " ⚠" }
+					fmt.Printf("  [%s] %.0f%% %-20s  %s%s\n",
+						b.Frame, b.CurrentConfidence*100, b.BeliefID,
+						truncate(b.Content, 55), stateMarker)
+				}
+			case "query":
+				if len(snapArgs) == 0 { fmt.Println("snapshot query: need belief ID"); break }
+				qr, qErr := snap.Query(snapArgs[0], now)
+				if qErr != nil { fmt.Printf("not found in snapshot: %v\n", qErr); break }
+				fmt.Printf("[%s] %.0f%% — %s\n", qr.Frame, qr.CurrentConfidence*100, qr.Content)
+			case "explain":
+				if len(snapArgs) == 0 { fmt.Println("snapshot explain: need belief ID"); break }
+				expl, eErr := snap.Explain(snapArgs[0], now)
+				if eErr != nil { fmt.Printf("error: %v\n", eErr); break }
+				fmt.Println(expl)
+			case "fragility":
+				n := 10
+				if len(snapArgs) > 0 { fmt.Sscanf(snapArgs[0], "%d", &n) }
+				entries := snap.FragilityScan(now)
+				if len(entries) == 0 { fmt.Println("no beliefs with sources to scan"); break }
+				if n > len(entries) { n = len(entries) }
+				fmt.Printf("Fragility in snapshot — top %d:\n\n", n)
+				for i, e := range entries[:n] {
+					dropStr := fmt.Sprintf("−%.0f pp", e.Drop*100)
+					if e.Drop < 0.001 { dropStr = "stable" }
+					fmt.Printf("  %2d.  [%3.0f%% → %3.0f%%]  %s  %s\n",
+						i+1, e.CurrentConf*100, e.ConfWithout*100, dropStr, e.BeliefID)
+					fmt.Printf("       weakest: %s (%s)  min-cut: %d\n",
+						e.WeakestSource, e.WeakestKind, e.MinCut)
+					content := e.BeliefContent
+					if len(content) > 70 { content = content[:67] + "..." }
+					fmt.Printf("       %q\n\n", content)
+				}
+			case "stats":
+				var na, ns, nc int
+				for _, b := range snapBeliefs {
+					switch b.State {
+					case lumen.BeliefActive:     na++
+					case lumen.BeliefSuspect:    ns++
+					case lumen.BeliefSuperseded: nc++
+					}
+				}
+				fmt.Printf("Beliefs: %d (%d active, %d suspect, %d contracted)\n",
+					len(snapBeliefs), na, ns, nc)
+				fmt.Printf("Records: %d\n", snap.RecordCount())
+			default:
+				fmt.Printf("snapshot: unsupported sub-command %q\n", snapCmd)
+				fmt.Println("supported: list | query <id> | explain <id> | fragility [n] | stats")
+			}
+			fmt.Printf("── end snapshot ──\n")
+
 		default:
 			fmt.Printf("unknown command: %q — type 'help'\n", cmd)
 		}
@@ -775,6 +858,10 @@ Epistemics
   conflict                  scan for epistemic conflicts across beliefs
   calibrate                 flag calibration issues (over/under-confident beliefs)
   advance <duration>        advance the reference clock (e.g. "advance 30d")
+  snapshot <YYYY-MM-DD> <cmd>  run a command on the store as it stood at that date
+                              e.g. snapshot 2022-01-01 list
+                                   snapshot 2022-01-01 query hard-problem
+                                   snapshot 2022-01-01 fragility
 
   help                      this message
 `)

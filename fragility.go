@@ -110,6 +110,9 @@ type sourceConf struct {
 
 // fragEntryFor computes the fragility entry for one belief.
 //
+// records and beliefConf are pre-snapshotted from s.records and s.beliefs;
+// this function is safe to call without holding s.mu.
+//
 // Two paths:
 //   - Composed beliefs (CompositionEvidence present): sensitivity analysis via
 //     BayesianCompose, recomputing the posterior with each evidence source removed.
@@ -120,9 +123,6 @@ type sourceConf struct {
 //       estimated = NoisyOr(sources \ {k}) / NoisyOr(sources) * current
 //     Valid when confidence is monotonically proportional to source noisy-or and
 //     decay applies uniformly regardless of source composition (both hold in practice).
-// fragEntryFor computes the fragility entry for one belief.
-// records and beliefConf are pre-snapshotted from s.records and s.beliefs;
-// this function is safe to call without holding s.mu.
 func (s *Store) fragEntryFor(beliefID, content string, currentConf float64, derivation []string, frame Frame, now time.Time, b *Belief,
 	records map[string]recSnap,
 	beliefConf map[string]float64,

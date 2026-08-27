@@ -307,10 +307,6 @@ func (s *Store) AllBeliefs(now time.Time) []*QueryResult {
 	return results
 }
 
-
-
-
-
 // BelieveComposed adds a belief with full Bayesian composition metadata.
 // It computes the posterior from prior and evidence, compares it to the
 // declared confidence, and warns if the discrepancy exceeds the threshold.
