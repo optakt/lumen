@@ -239,6 +239,7 @@ func (s *Store) ExportLM(now time.Time) string {
 			content := strings.ReplaceAll(bel.Content, "\n", " ")
 			fmt.Fprintf(&b, "    %q\n", content)
 			fmt.Fprintf(&b, "    confidence: %.4f\n", bel.Confidence)
+			fmt.Fprintf(&b, "    at: %q\n", bel.AssertedAt.UTC().Format(time.RFC3339))
 			if len(bel.Derivation) > 0 {
 				fmt.Fprintf(&b, "    from: %s\n", strings.Join(bel.Derivation, ", "))
 			}
