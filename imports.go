@@ -122,9 +122,13 @@ func loadParsed(result *ParseResult, store *Store, now time.Time) error {
 		if pb.HasCredalPrior {
 			conf = (pb.CredalPriorLo + pb.CredalPriorHi) / 2
 		}
+		assertedAt := now
+		if pb.At != nil {
+			assertedAt = *pb.At
+		}
 		b := &Belief{
 			ID: pb.ID, Content: pb.Content, Confidence: conf,
-			AssertedAt: now, Frame: pb.FrameName, Derivation: pb.From,
+			AssertedAt: assertedAt, Frame: pb.FrameName, Derivation: pb.From,
 		}
 		if pb.DecayOverride != nil {
 			b.DecayOverride = pb.DecayOverride

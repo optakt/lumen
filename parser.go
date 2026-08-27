@@ -46,6 +46,7 @@ type ParsedBelief struct {
 	Confidence    float64
 	From          []string
 	DecayOverride *DecayPolicy
+	At            *time.Time  // assertion timestamp; nil means use load time
 	// CredalPrior: if set, Confidence is ignored and CredalBayesUpdate is used.
 	HasCredalPrior bool
 	CredalPriorLo  float64
@@ -575,6 +576,28 @@ func (p *Parser) parseBelief() (ParsedBelief, error) {
 					b.HasCredalPrior = true
 					b.CredalPriorLo, b.CredalPriorHi = v, v
 				}
+			case "at":
+				// at: <timestamp> — assertion time; accepts RFC3339 or YYYY-MM-DD.
+				if _, err := p.expect(TokColon); err != nil {
+					return b, err
+				}
+				p.skipNewlines()
+				ts := p.cur()
+				if ts.Kind != TokString && ts.Kind != TokIdent {
+					return b, fmt.Errorf("at timestamp: expected STRING, got %s %q at %d:%d", ts.Kind, ts.Value, ts.Line, ts.Col)
+				}
+				p.advance()
+				var parsed time.Time
+				var atErr error
+				for _, layout := range []string{time.RFC3339, "2006-01-02"} {
+					if parsed, atErr = time.Parse(layout, ts.Value); atErr == nil {
+						break
+					}
+				}
+				if atErr != nil {
+					return b, fmt.Errorf("at timestamp %q: expected RFC3339 or YYYY-MM-DD: %w", ts.Value, atErr)
+				}
+				b.At = &parsed
 			case "evidence":
 				// Inline credal evidence block: evidence <id> \n INDENT ... DEDENT
 				ev, err := p.parseInlineEvidence()

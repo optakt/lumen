@@ -697,7 +697,7 @@ func main() {
 				continue
 			}
 			snap := store.SnapshotAt(snapDate)
-			snapBeliefs := snap.AllBeliefs(now)
+			snapBeliefs := snap.AllBeliefs(snapDate)
 			fmt.Printf("── snapshot at %s — %d beliefs ──\n", args[0], len(snapBeliefs))
 			snapCmd  := args[1]
 			snapArgs := args[2:]
@@ -716,18 +716,18 @@ func main() {
 				}
 			case "query":
 				if len(snapArgs) == 0 { fmt.Println("snapshot query: need belief ID"); break }
-				qr, qErr := snap.Query(snapArgs[0], now)
+				qr, qErr := snap.Query(snapArgs[0], snapDate)
 				if qErr != nil { fmt.Printf("not found in snapshot: %v\n", qErr); break }
 				fmt.Printf("[%s] %.0f%% — %s\n", qr.Frame, qr.CurrentConfidence*100, qr.Content)
 			case "explain":
 				if len(snapArgs) == 0 { fmt.Println("snapshot explain: need belief ID"); break }
-				expl, eErr := snap.Explain(snapArgs[0], now)
+				expl, eErr := snap.Explain(snapArgs[0], snapDate)
 				if eErr != nil { fmt.Printf("error: %v\n", eErr); break }
 				fmt.Println(expl)
 			case "fragility":
 				n := 10
 				if len(snapArgs) > 0 { fmt.Sscanf(snapArgs[0], "%d", &n) }
-				entries := snap.FragilityScan(now)
+				entries := snap.FragilityScan(snapDate)
 				if len(entries) == 0 { fmt.Println("no beliefs with sources to scan"); break }
 				if n > len(entries) { n = len(entries) }
 				fmt.Printf("Fragility in snapshot — top %d:\n\n", n)

@@ -367,6 +367,51 @@ believe hard-problem-real in epistemic
 	t.Logf("Credal prior parsed: [%.2f, %.2f]", b.CredalPriorLo, b.CredalPriorHi)
 }
 
+func TestBeliefAtTimestamp(t *testing.T) {
+	src := `
+frame historical
+    decay: none
+
+record event-1900 in historical
+    "Something happened in 1900."
+    at: "1900-01-01"
+
+believe conclusion-1910 in historical
+    "A conclusion formed in 1910."
+    confidence: 0.75
+    at: "1910-06-15"
+    from: event-1900
+`
+	s := NewStore()
+	now := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	if err := LoadFile(src, s, now); err != nil {
+		t.Fatalf("LoadFile: %v", err)
+	}
+	beliefs := s.AllBeliefs(now)
+	if len(beliefs) != 1 {
+		t.Fatalf("expected 1 belief, got %d", len(beliefs))
+	}
+	b := beliefs[0]
+	if b.BeliefID != "conclusion-1910" {
+		t.Fatalf("unexpected belief ID %q", b.BeliefID)
+	}
+
+	// Verify the assertion timestamp was parsed and set.
+	snap1910 := s.SnapshotAt(time.Date(1910, 6, 15, 0, 0, 0, 0, time.UTC))
+	if len(snap1910.AllBeliefs(time.Date(1910, 6, 15, 0, 0, 0, 0, time.UTC))) != 1 {
+		t.Error("belief should appear in snapshot at its assertion date")
+	}
+	snap1909 := s.SnapshotAt(time.Date(1909, 1, 1, 0, 0, 0, 0, time.UTC))
+	if len(snap1909.AllBeliefs(time.Date(1909, 1, 1, 0, 0, 0, 0, time.UTC))) != 0 {
+		t.Error("belief should not appear in snapshot before its assertion date")
+	}
+
+	// No decay (frame historical, decay: none), so confidence should be stable.
+	if b.CurrentConfidence < 0.74 || b.CurrentConfidence > 0.76 {
+		t.Errorf("expected confidence ~0.75, got %.4f", b.CurrentConfidence)
+	}
+}
+
 func TestCredalPriorLoadFile(t *testing.T) {
 	src := `
 frame epistemic

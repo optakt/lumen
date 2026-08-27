@@ -1,0 +1,95 @@
+// Lumen example: the retrodiction problem — and how Lumen fixes it.
+//
+// The retrodiction problem is a subtle bug in cross-frame belief import.
+// When a belief from frame A is used as evidence in frame B, the question
+// is: whose decay clock applies going forward?
+//
+// Naively applying frame A's decay retroactively is wrong — it says the
+// evidence was weaker than it was at the moment of import. The correct
+// answer: snapshot the source's confidence at import time, then decay only
+// under the receiving frame's policy from that point on.
+//
+// This file demonstrates the difference using a concrete scenario.
+//
+// ── Scenario ──────────────────────────────────────────────────────────────
+//
+// 2019: A clinical trial reports an efficacy result (empirical, short halflife).
+// 2022: A mechanistic theory imports that result as supporting evidence.
+//       At import time, the trial result is 3 years old and has decayed to 0.82.
+//       That value — 0.82 — is what the theory incorporated.
+// 2025: We query the theory. What was its confidence at import (2022)?
+//
+// Naive (buggy) answer: re-apply the empirical frame's decay from 2019 to now.
+//   By 2025 that's 6 years at a 3-year halflife → 0.25. The import looks weak.
+//   But 0.25 is what the source is worth *today*, not what was incorporated in 2022.
+//
+// Lumen's answer: snapshot 0.82 at import time (2022). Query the snapshot.
+//   The snapshot shows 0.82 — exactly what the theory knew when it was formed.
+//
+// Load: ./lumen-db examples/retrodiction.lm
+// Then:
+//   > list
+//   > explain mechanism-theory
+//   > snapshot 2022-01-15 query mechanism-theory
+//   > snapshot 2019-12-31 query mechanism-theory
+//   > snapshot 2025-01-01 list
+
+// ── Frames ────────────────────────────────────────────────────────────────
+
+// Empirical: short halflife. Clinical trial results decay quickly as
+// replications, meta-analyses, and methodological critiques accumulate.
+frame empirical
+    decay: exponential halflife: 1095d  // 3-year halflife
+
+// Theoretical: slow decay. Mechanistic theories persist until falsified.
+frame theoretical
+    decay: exponential halflife: 3650d  // 10-year halflife
+
+// ── Records ───────────────────────────────────────────────────────────────
+
+// 2019: A randomised controlled trial reports drug efficacy.
+record rct-2019 in empirical
+    "Randomised trial 2019 (n=1,200): drug X reduces symptom burden by 34% vs placebo. p<0.001."
+    at: "2019-06-01"
+
+// 2021: A replication confirms the direction, though effect size smaller.
+record replication-2021 in empirical
+    "Replication 2021 (n=800): drug X reduces symptom burden by 22% vs placebo. p=0.008."
+    at: "2021-03-01"
+
+// 2022: A mechanistic paper explains *why* the drug works, using the trials as evidence.
+// This record captures the theoretical claim itself.
+record mechanism-paper-2022 in theoretical
+    "Chen et al. 2022: proposed mechanism — drug X inhibits receptor Y, reducing inflammatory cascade. Supported by RCT-2019 and replication."
+    at: "2022-01-10"
+
+// ── Beliefs ───────────────────────────────────────────────────────────────
+
+// Empirical belief: drug X has a real effect (decays as trials age).
+// Formed shortly after the 2021 replication.
+believe drug-efficacy in empirical
+    "Drug X has a real positive effect on symptom burden."
+    confidence: 0.87
+    at: "2021-06-01"
+    from: rct-2019, replication-2021
+
+// Theoretical belief: the proposed mechanism explains the effect.
+// This belief is in the theoretical frame. It imports drug-efficacy
+// (an empirical belief) as supporting evidence.
+//
+// At import time (2022-01-10), drug-efficacy has been decaying for ~7 months
+// at the empirical 3-year halflife. Lumen snapshots its confidence at that moment.
+// The theoretical frame's slower 10-year decay applies going forward from 2022.
+believe mechanism-theory in theoretical
+    "Receptor Y inhibition is the primary mechanism of drug X's therapeutic effect."
+    confidence: 0.71
+    at: "2022-01-10"
+    from: drug-efficacy, mechanism-paper-2022
+
+// ── Queries ───────────────────────────────────────────────────────────────
+
+// What has happened to the mechanism theory over time?
+query mechanism-history
+    target: mechanism-theory
+    select: confidence-changes
+    since: "2019-01-01"

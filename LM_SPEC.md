@@ -114,6 +114,7 @@ believe <id> in <frame>
 | `confidence` | Declared confidence at assertion time |
 | `from` | Source IDs (records or beliefs) this belief derives from |
 | `prior` | Prior probability before evidence (for Bayesian composition) |
+| `at` | Assertion timestamp — ISO-8601 date or datetime (optional; defaults to load time) |
 | `evidence` | Inline evidence blocks for credal Bayesian composition (see below) |
 
 **Simple derivation:**
@@ -355,6 +356,7 @@ believe-decl ::= "believe" id "in" name newline believe-body
 believe-body ::= indent quoted-string newline
                        "confidence:" float newline
                        ["from:" id+ newline]
+                       ["at:" quoted-string newline]
                        ["prior:" (float | "[" float "," float "]") newline]
                        [evidence-block]
                  dedent
