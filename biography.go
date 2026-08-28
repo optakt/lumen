@@ -90,6 +90,8 @@ func (s *Store) EpistemicBiography(beliefID string, threshold float64, now time.
 	}
 	frame, _ := s.frames[b.Frame]
 	currentConf := b.CurrentConfidence(frame, now)
+	currentDeclared := b.Confidence
+	b = cloneBelief(b)
 	bio := &BeliefBiography{
 		BeliefID:   b.ID,
 		Content:    b.Content,
@@ -129,11 +131,10 @@ func (s *Store) EpistemicBiography(beliefID string, threshold float64, now time.
 			var label string
 			if i+1 < len(history) {
 				nextConf = history[i+1].Confidence
-				label = history[i+1].ChangeReason
 			} else {
-				nextConf = currentConf
-				label = "current"
+				nextConf = currentDeclared
 			}
+			label = v.ChangeReason
 			arc = append(arc, ConfidencePoint{
 				At:         v.ChangedAt,
 				Confidence: nextConf,
@@ -229,13 +230,13 @@ func (s *Store) EpistemicBiography(beliefID string, threshold float64, now time.
 func classifyMagnitude(abs float64) string {
 	switch {
 	case abs >= 0.30:
-		return "decisive"   // 30%+ shift: fundamentally revised view
+		return "decisive" // 30%+ shift: fundamentally revised view
 	case abs >= 0.15:
-		return "large"      // 15–30%: significant update
+		return "large" // 15–30%: significant update
 	case abs >= 0.07:
-		return "moderate"   // 7–15%: meaningful evidence
+		return "moderate" // 7–15%: meaningful evidence
 	default:
-		return "small"      // < 7%: incremental adjustment
+		return "small" // < 7%: incremental adjustment
 	}
 }
 
@@ -249,7 +250,7 @@ func RenderBiography(bio *BeliefBiography) string {
 	fmt.Fprintf(&b, "  frame: %s  ·  asserted: %s  ·  health: %s (%.0f/100)\n\n",
 		bio.Frame,
 		bio.AssertedAt.Format("2006-01-02"),
-		bio.CurrentHealth.Grade, bio.CurrentHealth.Score)
+		healthGrade(bio.CurrentHealth), healthScore(bio.CurrentHealth))
 
 	// Confidence arc
 	fmt.Fprintln(&b, "Confidence trajectory:")
@@ -274,7 +275,9 @@ func RenderBiography(bio *BeliefBiography) string {
 		fmt.Fprintf(&b, "Mind changes (%d):\n", len(bio.MindChanges))
 		for _, mc := range bio.MindChanges {
 			sign := "+"
-			if mc.Delta < 0 { sign = "-" }
+			if mc.Delta < 0 {
+				sign = "-"
+			}
 			fmt.Fprintf(&b, "  %s  %s %s%.0f pp  (%.0f%% → %.0f%%)  [%s]",
 				mc.At.Format("2006-01-02"),
 				mc.Direction, sign,
@@ -292,7 +295,7 @@ func RenderBiography(bio *BeliefBiography) string {
 	// Decay trajectory
 	if len(bio.DecayTrajectory) > 0 {
 		first := bio.DecayTrajectory[0]
-		last  := bio.DecayTrajectory[len(bio.DecayTrajectory)-1]
+		last := bio.DecayTrajectory[len(bio.DecayTrajectory)-1]
 		pctDrop := (first.Confidence - last.Confidence) / math.Max(first.Confidence, 1e-9) * 100
 		if pctDrop > 0.5 {
 			fmt.Fprintf(&b, "Decay: %.0f%% → %.0f%% over %s (%.1f%% total drop due to decay)\n\n",
@@ -357,11 +360,15 @@ func RenderBiography(bio *BeliefBiography) string {
 }
 
 func healthGrade(hs *HealthScore) string {
-	if hs == nil { return "?" }
+	if hs == nil {
+		return "?"
+	}
 	return hs.Grade
 }
 func healthScore(hs *HealthScore) float64 {
-	if hs == nil { return 0 }
+	if hs == nil {
+		return 0
+	}
 	return hs.Score
 }
 

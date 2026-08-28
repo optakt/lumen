@@ -126,3 +126,65 @@ func contains(s, substr string) bool {
 			return false
 		}())
 }
+
+func TestResolveImportsDiamondIsNotCycle(t *testing.T) {
+	dir := t.TempDir()
+	writeTemp(t, dir, "common.lm", frameBlock+`
+record common in f
+    "Shared record"
+`)
+	writeTemp(t, dir, "left.lm", `import "common.lm"
+record left in f
+    "Left record"
+`)
+	writeTemp(t, dir, "right.lm", `import "common.lm"
+record right in f
+    "Right record"
+`)
+	root := writeTemp(t, dir, "root.lm", `import "left.lm"
+import "right.lm"
+`)
+
+	s := NewStore()
+	if err := LoadFileWithImports(root, s, time.Now()); err != nil {
+		t.Fatalf("diamond import was mistaken for a cycle: %v", err)
+	}
+	if s.RecordCount() != 3 {
+		t.Fatalf("diamond import loaded %d records, want 3", s.RecordCount())
+	}
+}
+
+func TestResolveImportsCarriesQueriesAndRetractions(t *testing.T) {
+	dir := t.TempDir()
+	writeTemp(t, dir, "child.lm", frameBlock+`
+record r1 in f
+    "Retracted source"
+
+believe b1 in f
+    "Derived claim"
+    confidence: 0.8
+    from: r1
+
+retract r1 reason: "bad source"
+
+query changes
+    target: b1
+    select: confidence-changes
+`)
+	root := writeTemp(t, dir, "root.lm", `import "child.lm"
+`)
+
+	s := NewStore()
+	if err := LoadFileWithImports(root, s, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := s.GetQuery("changes"); !ok {
+		t.Fatal("query declared in imported file was dropped")
+	}
+	s.mu.RLock()
+	retracted := s.records["r1"].Retracted
+	s.mu.RUnlock()
+	if !retracted {
+		t.Fatal("retraction declared in imported file was dropped")
+	}
+}

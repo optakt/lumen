@@ -15,20 +15,24 @@ type ValidationIssue struct {
 
 func (v ValidationIssue) String() string {
 	target := ""
-	if v.BeliefID != "" { target = "belief " + v.BeliefID + ": " }
-	if v.RecordID != "" { target = "record " + v.RecordID + ": " }
+	if v.BeliefID != "" {
+		target = "belief " + v.BeliefID + ": "
+	}
+	if v.RecordID != "" {
+		target = "record " + v.RecordID + ": "
+	}
 	return fmt.Sprintf("[%s] %s%s", strings.ToUpper(v.Kind), target, v.Message)
 }
 
 // Validate checks the store for consistency issues.
 //
 // Checks performed:
-//   1. Orphaned derivation references (belief derives from non-existent source)
-//   2. Undefined frame references (belief or record names unknown frame)
-//   3. Circular derivation (A derives from B derives from A)
-//   4. Bridge frame references (bridge names unknown frames)
-//   5. Belief confidence out of range [0, 1]
-//   6. Empty content
+//  1. Orphaned derivation references (belief derives from non-existent source)
+//  2. Undefined frame references (belief or record names unknown frame)
+//  3. Circular derivation (A derives from B derives from A)
+//  4. Bridge frame references (bridge names unknown frames)
+//  5. Belief confidence out of range [0, 1]
+//  6. Empty content
 func (s *Store) Validate() []ValidationIssue {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -41,8 +45,12 @@ func (s *Store) Validate() []ValidationIssue {
 	// 1. Check belief derivation references.
 	for id, b := range s.beliefs {
 		for _, dep := range b.Derivation {
-			if _, ok := s.records[dep]; ok { continue }
-			if _, ok := s.beliefs[dep]; ok { continue }
+			if _, ok := s.records[dep]; ok {
+				continue
+			}
+			if _, ok := s.beliefs[dep]; ok {
+				continue
+			}
 			warn("error", id, "", fmt.Sprintf("derives from %q which does not exist", dep))
 		}
 		// 2. Undefined frame.
@@ -109,7 +117,7 @@ func (s *Store) Validate() []ValidationIssue {
 	}
 
 	// 4. Bridge frame references.
-	for _, br := range s.Bridges.bridges {
+	for _, br := range s.Bridges.All() {
 		if _, ok := s.frames[br.FromFrame]; !ok {
 			warn("warning", "", "", fmt.Sprintf("bridge %q: from-frame %q not defined", br.Name, br.FromFrame))
 		}

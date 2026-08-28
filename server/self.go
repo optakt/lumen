@@ -21,12 +21,12 @@ import (
 
 func (s *Server) routeSelf() {
 	// Versioned self-model routes.
-	s.mux.HandleFunc("POST /v1/self/claim",              s.handleSelfClaim)
-	s.mux.HandleFunc("POST /v1/self/correct",            s.handleSelfCorrect)
-	s.mux.HandleFunc("GET /v1/self/claims",              s.handleSelfList)
-	s.mux.HandleFunc("GET /v1/self/context",             s.handleSelfContext)
-	s.mux.HandleFunc("GET /v1/self/biography/{id}",      s.handleSelfBiography)
-	s.mux.HandleFunc("GET /v1/self/frame-report",        s.handleSelfFrameReport)
+	s.mux.HandleFunc("POST /v1/self/claim", s.handleSelfClaim)
+	s.mux.HandleFunc("POST /v1/self/correct", s.handleSelfCorrect)
+	s.mux.HandleFunc("GET /v1/self/claims", s.handleSelfList)
+	s.mux.HandleFunc("GET /v1/self/context", s.handleSelfContext)
+	s.mux.HandleFunc("GET /v1/self/biography/{id}", s.handleSelfBiography)
+	s.mux.HandleFunc("GET /v1/self/frame-report", s.handleSelfFrameReport)
 
 	// Legacy redirects for self-model routes — 308 with dynamic target,
 	// see redirectToV1 in server.go for the rationale.
@@ -55,6 +55,8 @@ type claimRequest struct {
 }
 
 func (s *Server) handleSelfClaim(w http.ResponseWriter, r *http.Request) {
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
 	var req claimRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
@@ -80,9 +82,16 @@ func (s *Server) handleSelfClaim(w http.ResponseWriter, r *http.Request) {
 	} else if !strings.HasPrefix(id, "self:") {
 		id = "self:" + id
 	}
+	if err := s.store.ValidateBeliefCandidate(&lumen.Belief{
+		ID: id, Frame: frame, Content: req.Content, Confidence: req.Confidence,
+		AssertedAt: now, Derivation: req.Sources,
+	}); err != nil {
+		writeErr(w, http.StatusConflict, "believe: "+err.Error())
+		return
+	}
 
 	// Sentinel record — retracting this cascades suspect marking to the belief.
-	sentinelID := "sentinel:" + id
+	sentinelID := newID("sentinel:" + id)
 	if err := s.store.Assert(&lumen.Record{
 		ID:        sentinelID,
 		Content:   "validity sentinel for " + id,
@@ -109,7 +118,10 @@ func (s *Server) handleSelfClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.save()
+	if err := s.save(); err != nil {
+		writeErr(w, http.StatusInternalServerError, "persist store: "+err.Error())
+		return
+	}
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"id":    id,
 		"frame": frame,
@@ -124,6 +136,8 @@ type correctRequest struct {
 }
 
 func (s *Server) handleSelfCorrect(w http.ResponseWriter, r *http.Request) {
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
 	var req correctRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
@@ -147,20 +161,40 @@ func (s *Server) handleSelfCorrect(w http.ResponseWriter, r *http.Request) {
 		replacesID = "self:" + replacesID
 	}
 
-	// Retract the prior claim's sentinel, marking it suspect.
-	if err := s.store.Retract("sentinel:"+replacesID, reason, now); err != nil {
-		writeErr(w, http.StatusNotFound, "prior claim not found: "+err.Error())
+	// Find the prior claim's validity sentinel. New claims use unique sentinel
+	// IDs; the deterministic fallback keeps older persisted claims correctable.
+	priorSentinel := ""
+	for _, sourceID := range s.store.Graph.DerivationSources(replacesID) {
+		if strings.HasPrefix(sourceID, "sentinel:") {
+			priorSentinel = sourceID
+			break
+		}
+	}
+	if priorSentinel == "" {
+		legacy := "sentinel:" + replacesID
+		if s.store.HasRecord(legacy) {
+			priorSentinel = legacy
+		}
+	}
+	if priorSentinel == "" || !s.store.HasRecord(priorSentinel) {
+		writeErr(w, http.StatusNotFound, "prior claim not found")
 		return
 	}
 
-	// Assert the replacement.
+	// Assert the replacement before retracting the old claim. With writeMu held,
+	// successful preflight of the old sentinel makes the final retraction safe;
+	// a failed replacement leaves the old commitment untouched.
 	conf := req.Confidence
 	if conf <= 0 {
 		conf = 0.75
 	}
+	if conf > 1 {
+		writeErr(w, http.StatusBadRequest, "confidence must be in (0, 1]")
+		return
+	}
 	s.ensureFrame("reasoning")
 	replacementID := newID("self:corrected")
-	sentinelID := "sentinel:" + replacementID
+	sentinelID := newID("sentinel:" + replacementID)
 	if err := s.store.Assert(&lumen.Record{
 		ID:        sentinelID,
 		Content:   "validity sentinel for " + replacementID,
@@ -178,13 +212,21 @@ func (s *Server) handleSelfCorrect(w http.ResponseWriter, r *http.Request) {
 		AssertedAt: now,
 		Derivation: []string{sentinelID},
 	}); err != nil {
+		_ = s.store.Retract(sentinelID, "orphaned: replacement assertion failed", now)
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if err := s.store.Retract(priorSentinel, reason, now); err != nil {
+		writeErr(w, http.StatusInternalServerError, "retract prior claim: "+err.Error())
+		return
+	}
 
-	s.save()
+	if err := s.save(); err != nil {
+		writeErr(w, http.StatusInternalServerError, "persist store: "+err.Error())
+		return
+	}
 	writeJSON(w, http.StatusCreated, map[string]any{
-		"retracted_id": req.ReplacesID,
+		"retracted_id": replacesID,
 		"new_id":       replacementID,
 	})
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -26,18 +25,18 @@ func init() {
 		{Name: "default", Composition: lumen.CompositionBayesian,
 			Decay: lumen.DecayPolicy{Kind: lumen.DecayNone}, ProvenanceDepth: 3, ImportedDecayPolicy: "most_conservative"},
 		{Name: "medical", Composition: lumen.CompositionBayesian,
-			Decay: lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: 30 * 24 * time.Hour},
+			Decay:           lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: 30 * 24 * time.Hour},
 			ProvenanceDepth: 4, ImportedDecayPolicy: "most_conservative"},
 		{Name: "sensor", Composition: lumen.CompositionBayesian,
-			Decay: lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: time.Hour},
+			Decay:           lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: time.Hour},
 			ProvenanceDepth: 2, ImportedDecayPolicy: "most_conservative"},
 		{Name: "empirical", Composition: lumen.CompositionBayesian,
-			Decay: lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: 10 * 365 * 24 * time.Hour},
+			Decay:           lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: 10 * 365 * 24 * time.Hour},
 			ProvenanceDepth: 5, ImportedDecayPolicy: "most_conservative"},
 		{Name: "philosophical", Composition: lumen.CompositionBayesian,
 			Decay: lumen.DecayPolicy{Kind: lumen.DecayNone}, ProvenanceDepth: 5, ImportedDecayPolicy: "most_conservative"},
 		{Name: "theoretical", Composition: lumen.CompositionBayesian,
-			Decay: lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: 20 * 365 * 24 * time.Hour},
+			Decay:           lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: 20 * 365 * 24 * time.Hour},
 			ProvenanceDepth: 4, ImportedDecayPolicy: "most_conservative"},
 		{Name: "reasoning", Composition: lumen.CompositionBayesian,
 			Decay: lumen.DecayPolicy{Kind: lumen.DecayNone}, ProvenanceDepth: 5, ImportedDecayPolicy: "most_conservative"},
@@ -444,57 +443,4 @@ func parseDuration(s string) (time.Duration, error) {
 		return 0, fmt.Errorf("unknown unit %c", unit)
 	}
 	return sign * dur, nil
-}
-
-// JSONAuditReport is a JSON-serializable form of the audit report.
-type JSONAuditReport struct {
-	TotalBeliefs    int                `json:"total_beliefs"`
-	WellCalibrated  int                `json:"well_calibrated"`
-	Overconfident   int                `json:"overconfident"`
-	Underconfident  int                `json:"underconfident"`
-	MeanDiscrepancy float64            `json:"mean_discrepancy"`
-	WorstBeliefID   string             `json:"worst_belief_id"`
-	Entries         []JSONAuditEntry   `json:"entries"`
-}
-
-type JSONAuditEntry struct {
-	ID                 string  `json:"id"`
-	Declared           float64 `json:"declared"`
-	Computed           float64 `json:"computed"`
-	Discrepancy        float64 `json:"discrepancy"`
-	Status             string  `json:"status"`
-	TopDriverID        string  `json:"top_driver_id,omitempty"`
-	TopDriverDelta     float64 `json:"top_driver_delta,omitempty"`
-}
-
-func auditToJSON(r *lumen.AuditReport) string {
-	jr := JSONAuditReport{
-		TotalBeliefs:    r.TotalBeliefs,
-		WellCalibrated:  r.WellCalibrated,
-		Overconfident:   r.Overconfident,
-		Underconfident:  r.Underconfident,
-		MeanDiscrepancy: r.MeanDiscrepancy,
-		WorstBeliefID:   r.WorstBeliefID,
-	}
-	for _, e := range r.Entries {
-		je := JSONAuditEntry{
-			ID:          e.BeliefID,
-			Declared:    e.DeclaredConfidence,
-			Computed:    e.ComputedConfidence,
-			Discrepancy: e.Discrepancy,
-			Status:      "calibrated",
-		}
-		if e.OverconfidenceWarn {
-			je.Status = "overconfident"
-		} else if e.UnderconfidenceWarn {
-			je.Status = "underconfident"
-		}
-		if e.Sensitivity != nil && len(e.Sensitivity.Sources) > 0 {
-			je.TopDriverID = e.Sensitivity.Sources[0].SourceID
-			je.TopDriverDelta = e.Sensitivity.Sources[0].MarginalContribution
-		}
-		jr.Entries = append(jr.Entries, je)
-	}
-	b, _ := json.MarshalIndent(jr, "", "  ")
-	return string(b)
 }

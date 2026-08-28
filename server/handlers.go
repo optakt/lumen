@@ -15,12 +15,14 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 // ─── Records ──────────────────────────────────────────────────────────────────
 
 type recordRequest struct {
-	ID        string `json:"id,omitempty"`
-	Content   string `json:"content"`
-	Frame     string `json:"frame,omitempty"`
+	ID      string `json:"id,omitempty"`
+	Content string `json:"content"`
+	Frame   string `json:"frame,omitempty"`
 }
 
 func (s *Server) handleAssertRecord(w http.ResponseWriter, r *http.Request) {
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
 	var req recordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
@@ -49,7 +51,10 @@ func (s *Server) handleAssertRecord(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusConflict, err.Error())
 		return
 	}
-	s.save()
+	if err := s.save(); err != nil {
+		writeErr(w, http.StatusInternalServerError, "persist store: "+err.Error())
+		return
+	}
 	writeJSON(w, http.StatusCreated, map[string]string{"id": id})
 }
 
@@ -64,6 +69,8 @@ type beliefRequest struct {
 }
 
 func (s *Server) handleBelieve(w http.ResponseWriter, r *http.Request) {
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
 	var req beliefRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
@@ -101,7 +108,10 @@ func (s *Server) handleBelieve(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusConflict, err.Error())
 		return
 	}
-	s.save()
+	if err := s.save(); err != nil {
+		writeErr(w, http.StatusInternalServerError, "persist store: "+err.Error())
+		return
+	}
 	writeJSON(w, http.StatusCreated, map[string]string{"id": id})
 }
 
@@ -138,6 +148,8 @@ type retractRequest struct {
 }
 
 func (s *Server) handleRetract(w http.ResponseWriter, r *http.Request) {
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
 	var req retractRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
@@ -151,7 +163,10 @@ func (s *Server) handleRetract(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	s.save()
+	if err := s.save(); err != nil {
+		writeErr(w, http.StatusInternalServerError, "persist store: "+err.Error())
+		return
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -170,7 +185,7 @@ func (s *Server) handleExplain(w http.ResponseWriter, r *http.Request) {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 func (s *Server) ensureFrame(name string) {
-	s.store.RegisterFrame(lumen.Frame{
+	s.store.RegisterFrameIfAbsent(lumen.Frame{
 		Name:        name,
 		Composition: lumen.CompositionBayesian,
 		Decay: lumen.DecayPolicy{

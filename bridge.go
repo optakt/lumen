@@ -1,8 +1,8 @@
 package lumen
 
 import (
-	"sort"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -16,7 +16,7 @@ import (
 //   - Loss annotations propagate — a belief that crossed a bridge carries the loss
 //   - verified: false is honest — some bridges are engineering compromises
 type Bridge struct {
-	Name     string
+	Name      string
 	FromFrame string
 	ToFrame   string
 	// Loss describes what gets collapsed or discarded in the translation.
@@ -48,14 +48,21 @@ func NewBridgeRegistry() *BridgeRegistry {
 
 // Register adds a bridge to the registry.
 func (r *BridgeRegistry) Register(b *Bridge) error {
+	if b == nil {
+		return fmt.Errorf("bridge must not be nil")
+	}
+	if b.Name == "" {
+		return fmt.Errorf("bridge name must not be empty")
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, exists := r.bridges[b.Name]; exists {
 		return fmt.Errorf("bridge %s already registered", b.Name)
 	}
-	r.bridges[b.Name] = b
+	copyBridge := *b
+	r.bridges[b.Name] = &copyBridge
 	key := b.FromFrame + "→" + b.ToFrame
-	r.byFrames[key] = append(r.byFrames[key], b)
+	r.byFrames[key] = append(r.byFrames[key], &copyBridge)
 	return nil
 }
 
@@ -64,7 +71,11 @@ func (r *BridgeRegistry) Lookup(name string) (*Bridge, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	b, ok := r.bridges[name]
-	return b, ok
+	if !ok {
+		return nil, false
+	}
+	copyBridge := *b
+	return &copyBridge, true
 }
 
 // BridgesFor returns all declared bridges from one frame to another.
@@ -72,7 +83,13 @@ func (r *BridgeRegistry) BridgesFor(fromFrame, toFrame string) []*Bridge {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	key := fromFrame + "→" + toFrame
-	return r.byFrames[key]
+	bridges := r.byFrames[key]
+	result := make([]*Bridge, len(bridges))
+	for i, bridge := range bridges {
+		copyBridge := *bridge
+		result[i] = &copyBridge
+	}
+	return result
 }
 
 // RequiresBridge returns true if the store should require an explicit bridge
@@ -82,7 +99,10 @@ func (r *BridgeRegistry) All() []*Bridge {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	out := make([]*Bridge, 0, len(r.bridges))
-	for _, b := range r.bridges { out = append(out, b) }
+	for _, b := range r.bridges {
+		copyBridge := *b
+		out = append(out, &copyBridge)
+	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out
 }
@@ -151,11 +171,6 @@ func (b *BridgedBelief) ProvenanceAnnotation() string {
 	}
 	var parts []string
 	for _, c := range b.Crossings {
-		verified := "unverified"
-		if _, ok := b.Crossings[0].LossCarried, false; ok {
-			verified = "verified"
-		}
-		_ = verified
 		parts = append(parts, fmt.Sprintf("%s (%s→%s)", c.BridgeName, c.FromFrame, c.ToFrame))
 	}
 	return fmt.Sprintf("translated via %s; accumulated loss: %s",

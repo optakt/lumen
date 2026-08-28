@@ -9,14 +9,14 @@ import (
 
 // FragilityEntry describes how sensitive a belief is to the loss of a single source.
 type FragilityEntry struct {
-	BeliefID       string
-	BeliefContent  string
-	CurrentConf    float64
-	WeakestSource  string  // ID of the source whose loss is most damaging
-	WeakestKind    string  // "record" or "belief"
-	ConfWithout    float64 // estimated confidence without the weakest source
-	Drop           float64 // CurrentConf - ConfWithout (positive = fragile)
-	TotalSources   int
+	BeliefID      string
+	BeliefContent string
+	CurrentConf   float64
+	WeakestSource string  // ID of the source whose loss is most damaging
+	WeakestKind   string  // "record" or "belief"
+	ConfWithout   float64 // estimated confidence without the weakest source
+	Drop          float64 // CurrentConf - ConfWithout (positive = fragile)
+	TotalSources  int
 	// MinCut is the minimum number of sources that must be simultaneously removed
 	// to collapse the belief confidence to zero. For N full-confidence records,
 	// MinCut = N (all must be retracted). For decayed beliefs, MinCut may be 1.
@@ -37,18 +37,18 @@ func (e FragilityEntry) String() string {
 //
 // For beliefs with full Bayesian composition data the sensitivity analysis
 // gives a better answer; this function uses that path when available.
-type recSnap struct{ exists, retracted bool; conf float64 }
+type recSnap struct{ exists, retracted bool }
 
 func (s *Store) FragilityScan(now time.Time) []FragilityEntry {
 	s.mu.RLock()
 	type snap struct {
-		id          string
-		content     string
-		frame       Frame
-		conf        float64
-		state       BeliefState
-		derivation  []string
-		belief      *Belief  // pointer for composition metadata access
+		id         string
+		content    string
+		frame      Frame
+		conf       float64
+		state      BeliefState
+		derivation []string
+		belief     *Belief // pointer for composition metadata access
 	}
 	var beliefs []snap
 	for id, b := range s.beliefs {
@@ -120,7 +120,7 @@ type sourceConf struct {
 //   - Derived beliefs (no composition metadata): proportional decay approximation.
 //     Models confidence as NoisyOr(sources) * decay_factor, where decay_factor =
 //     current / NoisyOr(all sources). Removing source k gives:
-//       estimated = NoisyOr(sources \ {k}) / NoisyOr(sources) * current
+//     estimated = NoisyOr(sources \ {k}) / NoisyOr(sources) * current
 //     Valid when confidence is monotonically proportional to source noisy-or and
 //     decay applies uniformly regardless of source composition (both hold in practice).
 func (s *Store) fragEntryFor(beliefID, content string, currentConf float64, derivation []string, frame Frame, now time.Time, b *Belief,
@@ -202,7 +202,7 @@ func (s *Store) fragEntryFor(beliefID, content string, currentConf float64, deri
 		return nil
 	}
 
-	worstID   := sources[0].id
+	worstID := sources[0].id
 	worstKind := sources[0].kind
 	worstRemConf := estimateWithout(sources, 0, currentConf)
 
@@ -243,7 +243,9 @@ func estimateWithout(sources []sourceConf, skip int, currentConf float64) float6
 	}
 	without := make([]sourceConf, 0, len(sources)-1)
 	for i, s := range sources {
-		if i != skip { without = append(without, s) }
+		if i != skip {
+			without = append(without, s)
+		}
 	}
 	return norScale(without, sources, currentConf)
 }

@@ -4,7 +4,6 @@ import (
 	"os"
 	"testing"
 	"time"
-
 )
 
 func TestSaveAndLoadStore(t *testing.T) {
@@ -23,27 +22,41 @@ func TestSaveAndLoadStore(t *testing.T) {
 	// Save
 	dbPath := t.TempDir() + "/test.db"
 	db, err := OpenDB(dbPath)
-	if err != nil { t.Fatalf("OpenDB: %v", err) }
-	if err := SaveStore(s, db); err != nil { t.Fatalf("SaveStore: %v", err) }
+	if err != nil {
+		t.Fatalf("OpenDB: %v", err)
+	}
+	if err := SaveStore(s, db); err != nil {
+		t.Fatalf("SaveStore: %v", err)
+	}
 	db.Close()
 
 	// Load fresh
 	db2, err := OpenDB(dbPath)
-	if err != nil { t.Fatalf("OpenDB(2): %v", err) }
+	if err != nil {
+		t.Fatalf("OpenDB(2): %v", err)
+	}
 	defer db2.Close()
 
 	s2, err := LoadStore(db2, now)
-	if err != nil { t.Fatalf("LoadStore: %v", err) }
+	if err != nil {
+		t.Fatalf("LoadStore: %v", err)
+	}
 
 	// Verify records
 	s2.mu.RLock()
-	if len(s2.records) != 2 { t.Errorf("expected 2 records, got %d", len(s2.records)) }
-	if len(s2.beliefs) != 2 { t.Errorf("expected 2 beliefs, got %d", len(s2.beliefs)) }
+	if len(s2.records) != 2 {
+		t.Errorf("expected 2 records, got %d", len(s2.records))
+	}
+	if len(s2.beliefs) != 2 {
+		t.Errorf("expected 2 beliefs, got %d", len(s2.beliefs))
+	}
 	s2.mu.RUnlock()
 
 	// Query a belief
 	q, err := s2.Query("b1", now)
-	if err != nil { t.Fatalf("Query b1: %v", err) }
+	if err != nil {
+		t.Fatalf("Query b1: %v", err)
+	}
 	if q.Content != "IIT is significantly weakened." {
 		t.Errorf("unexpected content: %q", q.Content)
 	}
@@ -85,7 +98,9 @@ func TestRoundtripRetractedRecord(t *testing.T) {
 	db2, _ := OpenDB(dbPath)
 	defer db2.Close()
 	s2, err := LoadStore(db2, now)
-	if err != nil { t.Fatalf("LoadStore: %v", err) }
+	if err != nil {
+		t.Fatalf("LoadStore: %v", err)
+	}
 
 	s2.mu.RLock()
 	r := s2.records["r1"]
@@ -125,10 +140,10 @@ func TestPersistNewFields(t *testing.T) {
 
 	// Foundational record.
 	if err := s.Assert(&Record{
-		ID:          "axiom-persist",
-		Content:     "Foundational axiom.",
-		Frame:       "monitored",
-		Timestamp:   now,
+		ID:           "axiom-persist",
+		Content:      "Foundational axiom.",
+		Frame:        "monitored",
+		Timestamp:    now,
 		Foundational: true,
 	}); err != nil {
 		t.Fatalf("Assert foundational: %v", err)
@@ -136,13 +151,13 @@ func TestPersistNewFields(t *testing.T) {
 
 	// Contracted belief.
 	if err := s.Believe(&Belief{
-		ID:          "belief-contracted",
-		Content:     "This belief was contracted.",
-		Confidence:  0.80,
-		Frame:       "monitored",
-		AssertedAt:  now,
-		Derivation:  []string{"axiom-persist"},
-		State:       BeliefSuperseded,
+		ID:           "belief-contracted",
+		Content:      "This belief was contracted.",
+		Confidence:   0.80,
+		Frame:        "monitored",
+		AssertedAt:   now,
+		Derivation:   []string{"axiom-persist"},
+		State:        BeliefSuperseded,
 		ContractedBy: "axiom-persist",
 	}); err != nil {
 		t.Fatalf("Believe contracted: %v", err)
@@ -202,7 +217,9 @@ func TestPersistNewFields(t *testing.T) {
 func TestPersistCompositionFields(t *testing.T) {
 	dbPath := t.TempDir() + "/test.db"
 	db, err := OpenDB(dbPath)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(func() { db.Close() })
 	s := NewStore()
 	now := time.Now()
@@ -267,7 +284,9 @@ func TestPersistCompositionFields(t *testing.T) {
 func TestPersistCrossFrameFields(t *testing.T) {
 	dbPath := t.TempDir() + "/test.db"
 	db, err := OpenDB(dbPath)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(func() { db.Close() })
 	s := NewStore()
 	now := time.Now()
@@ -327,7 +346,9 @@ func TestPersistCrossFrameFields(t *testing.T) {
 func TestPersistDecayOverride(t *testing.T) {
 	dbPath := t.TempDir() + "/test.db"
 	db, err := OpenDB(dbPath)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	t.Cleanup(func() { db.Close() })
 	s := NewStore()
 	now := time.Now()
@@ -370,8 +391,10 @@ func TestPersistDecayOverride(t *testing.T) {
 	elapsed := 100 * 24 * time.Hour
 	conf := loaded.CurrentConfidence(s2.frames["reasoning"], now.Add(elapsed))
 	expected := 0.9 - 0.01*100 // linear: rate per day
-	if conf < 0 { expected = 0 }
-	if abs := conf - expected; abs > 0.001 && abs < -0.001 {
+	if expected < 0 {
+		expected = 0
+	}
+	if abs := conf - expected; abs > 0.001 || abs < -0.001 {
 		t.Errorf("DecayOverride not applied: want ~%.3f, got %.3f", expected, conf)
 	}
 }

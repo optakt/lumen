@@ -50,14 +50,6 @@ func (p CredalPosterior) Contains(v float64) bool {
 	return v >= p.Lo && v <= p.Hi
 }
 
-// bayesUpdatePoint is the standard single-step Bayesian update via log-odds.
-// Returns the posterior for a given prior and likelihood ratio.
-// Both prior and lr must be positive; prior must be in (0,1).
-func bayesUpdatePoint(prior, lr float64) float64 {
-	logOdds := math.Log(prior/(1-prior)) + math.Log(lr)
-	return 1 / (1 + math.Exp(-logOdds))
-}
-
 // CredalBayesUpdate computes the posterior credal set given an interval prior
 // and a set of evidence with interval-valued likelihood ratios.
 //
@@ -73,19 +65,21 @@ func bayesUpdatePoint(prior, lr float64) float64 {
 // with the combined LR interval endpoints.
 //
 // Confidence weighting is applied to each LR:
-//   effective_LR = 1 + confidence * (LR - 1)
+//
+//	effective_LR = 1 + confidence * (LR - 1)
+//
 // For interval LRs, this is applied to both endpoints.
 func CredalBayesUpdate(prior CredalPrior, evidence []CredalEvidence) (CredalPosterior, error) {
-	if prior.Lo <= 0 || prior.Hi >= 1 || prior.Lo > prior.Hi {
+	if math.IsNaN(prior.Lo) || math.IsNaN(prior.Hi) || math.IsInf(prior.Lo, 0) || math.IsInf(prior.Hi, 0) || prior.Lo <= 0 || prior.Hi >= 1 || prior.Lo > prior.Hi {
 		return CredalPosterior{}, fmt.Errorf("invalid credal prior [%.4f, %.4f]: must have 0 < lo <= hi < 1",
 			prior.Lo, prior.Hi)
 	}
 	for _, e := range evidence {
-		if e.LRLo <= 0 || e.LRHi < e.LRLo {
+		if math.IsNaN(e.LRLo) || math.IsNaN(e.LRHi) || math.IsInf(e.LRLo, 0) || math.IsInf(e.LRHi, 0) || e.LRLo <= 0 || e.LRHi < e.LRLo {
 			return CredalPosterior{}, fmt.Errorf("invalid LR interval [%.4f, %.4f] for %s",
 				e.LRLo, e.LRHi, e.SourceID)
 		}
-		if e.Confidence <= 0 || e.Confidence > 1 {
+		if math.IsNaN(e.Confidence) || math.IsInf(e.Confidence, 0) || e.Confidence <= 0 || e.Confidence > 1 {
 			return CredalPosterior{}, fmt.Errorf("invalid confidence %.4f for %s",
 				e.Confidence, e.SourceID)
 		}
@@ -126,11 +120,11 @@ func CredalBayesUpdate(prior CredalPrior, evidence []CredalEvidence) (CredalPost
 
 // CredalImprecisionReport describes how imprecision evolved through the update.
 type CredalImprecisionReport struct {
-	PriorWidth     float64
-	PosteriorWidth float64
-	Reduction      float64 // PriorWidth - PosteriorWidth (positive = imprecision reduced)
-	PriorSources   []string // which sources contributed imprecision via interval LRs
-	Posterior      CredalPosterior
+	PriorWidth      float64
+	PosteriorWidth  float64
+	Reduction       float64  // PriorWidth - PosteriorWidth (positive = imprecision reduced)
+	PriorSources    []string // which sources contributed imprecision via interval LRs
+	Posterior       CredalPosterior
 	PointComparison float64 // result of standard BayesianCompose with midpoint prior/LRs
 }
 
@@ -216,8 +210,8 @@ func FormatCredalReport(r *CredalImprecisionReport) string {
 // This models: "I know this was asserted sometime in the last hour, and I believe
 // the halflife is between 20 and 40 days."
 type CredalDecay struct {
-	AgeMin    float64 // minimum elapsed time in hours
-	AgeMax    float64 // maximum elapsed time in hours
+	AgeMin      float64 // minimum elapsed time in hours
+	AgeMax      float64 // maximum elapsed time in hours
 	HalflifeMin float64 // minimum halflife in hours
 	HalflifeMax float64 // maximum halflife in hours
 }

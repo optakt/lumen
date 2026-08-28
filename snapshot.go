@@ -21,70 +21,97 @@ import "time"
 //	// result reflects what the store believed before 2022 about that belief.
 func (s *Store) SnapshotAt(t time.Time) *Store {
 	s.mu.RLock()
-
-	// Collect the IDs of all nodes asserted at or before t.
-	// TemporalGraph.StateAt acquires its own lock, so release ours first.
-	frames  := make(map[string]Frame, len(s.frames))
+	frames := make(map[string]Frame, len(s.frames))
 	records := make(map[string]*Record, len(s.records))
 	beliefs := make(map[string]*Belief, len(s.beliefs))
+	queries := make(map[string]ParsedQuery, len(s.namedQueries))
+	recordVersions := make(map[string][]RecordVersion, len(s.recordVersions))
+	for id, frame := range s.frames {
+		frames[id] = frame
+	}
+	for id, record := range s.records {
+		records[id] = cloneRecord(record)
+	}
+	for id, belief := range s.beliefs {
+		beliefs[id] = cloneBelief(belief)
+	}
+	for id, query := range s.namedQueries {
+		queries[id] = query
+	}
+	for id, history := range s.recordVersions {
+		recordVersions[id] = cloneRecordVersions(history)
+	}
 
-	for k, v := range s.frames  { frames[k]  = v }
-	for k, v := range s.records { records[k] = v }
-	for k, v := range s.beliefs { beliefs[k] = v }
-
-	// Copy bridges.
+	s.versions.mu.RLock()
+	versions := make(map[string][]BeliefVersion, len(s.versions.versions))
+	for id, history := range s.versions.versions {
+		versions[id] = cloneVersions(history)
+	}
+	s.versions.mu.RUnlock()
 	bridgeList := s.Bridges.All()
-
+	timeline := s.Temporal.Timeline()
 	s.mu.RUnlock()
 
-	// Ask the temporal graph which nodes existed at t.
 	existsAt := make(map[string]bool)
-	for _, id := range s.Temporal.StateAt(t) {
-		existsAt[id] = true
+	for _, event := range timeline {
+		if !event.AssertedAt.After(t) {
+			existsAt[event.NodeID] = true
+		}
 	}
 
-	// Build the snapshot store.
+	// Restore the belief state immediately before the first change after t.
+	// If no later change exists, the current state is already the state at t.
+	for id, belief := range beliefs {
+		for _, version := range versions[id] {
+			if t.Before(version.ChangedAt) {
+				applyBeliefVersion(belief, version)
+				break
+			}
+		}
+	}
+
 	snap := NewStore()
-
-	// Register all frames — they are configuration, not timestamped evidence.
-	for _, f := range frames {
-		snap.RegisterFrame(f)
+	snap.frames = frames
+	snap.namedQueries = queries
+	for _, bridge := range bridgeList {
+		copyBridge := *bridge
+		_ = snap.Bridges.Register(&copyBridge)
 	}
 
-	// Register all bridges.
-	for _, br := range bridgeList {
-		snap.Bridges.Register(br)
-	}
-
-	// Admit records that existed at t.
-	for id, r := range records {
+	for id, record := range records {
 		if !existsAt[id] {
 			continue
 		}
-		// Deep-copy so the snapshot is independent.
-		rc := *r
-		_ = snap.Assert(&rc) //nolint:errcheck // only fails on duplicate ID, impossible here
+		for _, version := range recordVersions[id] {
+			if t.Before(version.ChangedAt) {
+				record = cloneRecord(&version.Record)
+				break
+			}
+		}
+		if record.Retracted && !record.RetractedAt.IsZero() && t.Before(record.RetractedAt) {
+			record.Retracted = false
+			record.RetractedAt = time.Time{}
+			record.RetractReason = ""
+		}
+		snap.records[id] = record
+		snap.Temporal.Record(id, "record", record.Timestamp, nil)
 	}
 
-	// Admit beliefs that existed at t and whose derivation sources all existed at t.
-	// Process in temporal order so derivation sources are always admitted before
-	// their dependents.
-	timeline := s.Temporal.Timeline()
-	for _, ev := range timeline {
-		if ev.Kind != "belief" {
+	admitted := make(map[string]bool, len(snap.records)+len(beliefs))
+	for id := range snap.records {
+		admitted[id] = true
+	}
+	for _, event := range timeline {
+		if event.Kind != "belief" || event.AssertedAt.After(t) || admitted[event.NodeID] {
 			continue
 		}
-		if !existsAt[ev.NodeID] {
-			continue
-		}
-		b, ok := beliefs[ev.NodeID]
+		belief, ok := beliefs[event.NodeID]
 		if !ok {
 			continue
 		}
-		// Require all derivation sources to exist in the snapshot.
 		sourcesPresent := true
-		for _, srcID := range b.Derivation {
-			if !existsAt[srcID] {
+		for _, sourceID := range belief.Derivation {
+			if !admitted[sourceID] {
 				sourcesPresent = false
 				break
 			}
@@ -92,13 +119,50 @@ func (s *Store) SnapshotAt(t time.Time) *Store {
 		if !sourcesPresent {
 			continue
 		}
-		bc := *b
-		bc.CrossFrame   = append([]CrossFrameSource{}, b.CrossFrame...)
-		bc.ImportedDecay = append([]DecayPolicy{}, b.ImportedDecay...)
-		bc.Derivation    = append([]string{}, b.Derivation...)
-		bc.CompositionEvidence = append([]Evidence{}, b.CompositionEvidence...)
-		_ = snap.Believe(&bc) //nolint:errcheck // only fails on duplicate ID, impossible here
+		snap.beliefs[belief.ID] = belief
+		admitted[belief.ID] = true
+		for _, sourceID := range belief.Derivation {
+			if snap.dependents[sourceID] == nil {
+				snap.dependents[sourceID] = make(map[string]bool)
+			}
+			snap.dependents[sourceID][belief.ID] = true
+		}
+		snap.Temporal.Record(belief.ID, "belief", belief.AssertedAt, belief.Derivation)
+		if history, ok := versions[belief.ID]; ok {
+			snap.versions.versions[belief.ID] = cloneVersions(history)
+		}
 	}
 
+	snap.Graph = s.Graph.CloneFiltered(admitted)
+	// Rebuild derivation edges from historical belief state. The current graph
+	// may no longer contain edges removed by a later contraction.
+	for _, belief := range snap.beliefs {
+		for _, sourceID := range belief.Derivation {
+			snap.Graph.AddEdge(Edge{From: sourceID, To: belief.ID, Kind: EdgeDerives})
+		}
+	}
+	snap.Entities = s.Entities.CloneFiltered(admitted)
+	snap.conflictDirty = true
+	snap.searchDirty = true
 	return snap
+}
+
+func applyBeliefVersion(belief *Belief, version BeliefVersion) {
+	belief.Content = version.Content
+	belief.Confidence = version.Confidence
+	belief.Frame = version.Frame
+	belief.State = version.State
+	belief.Derivation = append([]string(nil), version.Derivation...)
+	belief.ContractedBy = version.ContractedBy
+	belief.ImportedDecay = append([]DecayPolicy(nil), version.ImportedDecay...)
+	belief.CrossFrame = append([]CrossFrameSource(nil), version.CrossFrame...)
+	belief.CompositionPrior = version.CompositionPrior
+	belief.CompositionEvidence = append([]Evidence(nil), version.CompositionEvidence...)
+	belief.AssertedAt = version.AssertedAt
+	if version.DecayOverride == nil {
+		belief.DecayOverride = nil
+	} else {
+		copyDecay := *version.DecayOverride
+		belief.DecayOverride = &copyDecay
+	}
 }

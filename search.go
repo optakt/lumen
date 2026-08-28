@@ -133,7 +133,9 @@ func (s *Store) Search(idx *SearchIndex, query string, topK int) []SearchResult 
 			}
 		}
 		docNorm := idx.norms[id]
-		if docNorm == 0 { continue }
+		if docNorm == 0 {
+			continue
+		}
 		sim := dot / (queryNorm * docNorm)
 		if sim > 0.01 {
 			candidates = append(candidates, scored{id, sim})
@@ -264,22 +266,11 @@ func tfidfVector(tf, idf map[string]float64) map[string]float64 {
 	return vec
 }
 
-func cosineSimilarity(a, b map[string]float64) float64 {
-	dot := 0.0
-	for term, va := range a {
-		if vb, ok := b[term]; ok {
-			dot += va * vb
-		}
-	}
-	normA := vecNorm(a)
-	normB := vecNorm(b)
-	if normA == 0 || normB == 0 { return 0 }
-	return dot / (normA * normB)
-}
-
 func vecNorm(v map[string]float64) float64 {
 	sum := 0.0
-	for _, val := range v { sum += val * val }
+	for _, val := range v {
+		sum += val * val
+	}
 	return math.Sqrt(sum)
 }
 
@@ -297,14 +288,17 @@ func (s *Store) CachedSearch(query string, topK int) []SearchResult {
 		s.mu.RUnlock()
 		return s.Search(idx, query, topK)
 	}
+	generation := s.searchGeneration
 	s.mu.RUnlock()
 
 	// Rebuild outside the read lock (BuildSearchIndex takes its own read lock).
 	idx := s.BuildSearchIndex()
 
 	s.mu.Lock()
-	s.searchIndex = idx
-	s.searchDirty = false
+	if s.searchGeneration == generation {
+		s.searchIndex = idx
+		s.searchDirty = false
+	}
 	s.mu.Unlock()
 
 	return s.Search(idx, query, topK)
@@ -314,4 +308,5 @@ func (s *Store) CachedSearch(query string, topK int) []SearchResult {
 // Must be called under s.mu.Lock() by any write that adds or removes indexable content.
 func (s *Store) invalidateSearch() {
 	s.searchDirty = true
+	s.searchGeneration++
 }

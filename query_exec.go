@@ -134,8 +134,7 @@ func (s *Store) execConfidenceChanges(beliefID string, now time.Time) ([]QueryEv
 		s.mu.RUnlock()
 		return nil, fmt.Errorf("belief %q not found", beliefID)
 	}
-	frame, _ := s.frames[b.Frame]
-	currentConf := b.CurrentConfidence(frame, now)
+	currentConf := b.Confidence
 	s.mu.RUnlock()
 
 	history := s.versions.History(beliefID)
@@ -149,11 +148,10 @@ func (s *Store) execConfidenceChanges(beliefID string, now time.Time) ([]QueryEv
 		var reason string
 		if i+1 < len(history) {
 			toConf = history[i+1].Confidence
-			reason = history[i+1].ChangeReason
 		} else {
 			toConf = currentConf
-			reason = "(current)"
 		}
+		reason = v.ChangeReason
 
 		delta := toConf - v.Confidence
 		if math.Abs(delta) < 1e-9 {
@@ -205,11 +203,10 @@ func (s *Store) execSourceChanges(beliefID string, now time.Time) ([]QueryEvent,
 		var eventAt time.Time
 		if i+1 < len(history) {
 			nextDeriv = history[i+1].Derivation
-			eventAt = history[i+1].ChangedAt
 		} else {
 			nextDeriv = currentDeriv
-			eventAt = v.ChangedAt
 		}
+		eventAt = v.ChangedAt
 
 		prev := toSet(v.Derivation)
 		next := toSet(nextDeriv)

@@ -60,8 +60,9 @@ func (s *Store) Recover(beliefID string, now time.Time) error {
 			if src.State == BeliefSuperseded {
 				return fmt.Errorf("source belief %q is contracted; recover it first, then recover %q", srcID, beliefID)
 			}
+		} else {
+			return fmt.Errorf("source %q no longer exists; cannot recover %q", srcID, beliefID)
 		}
-		// Unknown sources are skipped — they may have been valid at contraction time.
 	}
 
 	// Snapshot the superseded state before recovery.
@@ -71,6 +72,7 @@ func (s *Store) Recover(beliefID string, now time.Time) error {
 	b.State = BeliefActive
 	b.ContractedBy = ""
 	s.invalidateConflicts()
+	s.invalidateSearch()
 
 	// Re-populate graph indexes.
 	for _, srcID := range b.Derivation {
@@ -82,7 +84,8 @@ func (s *Store) Recover(beliefID string, now time.Time) error {
 		s.dependents[srcID][b.ID] = true
 	}
 	s.Entities.ExtractAndIndex(b.ID, b.Content)
-	s.Temporal.Record(b.ID, "belief", b.AssertedAt, b.Derivation)
+	// The original temporal event survives contraction. Recovery is captured in
+	// version history; recording the old assertion again would duplicate it.
 
 	return nil
 }

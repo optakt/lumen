@@ -8,10 +8,12 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
-	lumen "github.com/optakt/lumen"
 	bolt "go.etcd.io/bbolt"
+
+	lumen "github.com/optakt/lumen"
 )
 
 // Config holds server configuration.
@@ -27,7 +29,7 @@ type Config struct {
 // DefaultConfig returns a sensible default configuration.
 func DefaultConfig() Config {
 	return Config{
-		Addr:                 ":3737",
+		Addr:                 "127.0.0.1:3737",
 		DBPath:               "lumen.db",
 		ContextMaxBeliefs:    10,
 		ContextMinConfidence: 0.5,
@@ -38,15 +40,19 @@ func DefaultConfig() Config {
 
 // Server wraps the belief store and HTTP mux.
 type Server struct {
-	cfg    Config
-	store  *lumen.Store
-	db     *bolt.DB
-	mux    *http.ServeMux
-	logger *slog.Logger
+	cfg     Config
+	store   *lumen.Store
+	db      *bolt.DB
+	mux     *http.ServeMux
+	logger  *slog.Logger
+	writeMu sync.Mutex
 }
 
 // New creates a Server, opening or creating the belief store at cfg.DBPath.
 func New(cfg Config, logger *slog.Logger) (*Server, error) {
+	if logger == nil {
+		logger = slog.Default()
+	}
 	db, err := lumen.OpenDB(cfg.DBPath)
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
@@ -54,13 +60,13 @@ func New(cfg Config, logger *slog.Logger) (*Server, error) {
 
 	store, err := lumen.LoadStore(db, time.Now())
 	if err != nil {
-		// Fresh store if the DB is empty.
-		store = lumen.NewStore()
+		_ = db.Close()
+		return nil, fmt.Errorf("load store: %w", err)
 	}
 
 	// Ensure the default frame exists.
 	if cfg.DefaultFrame != "" {
-		store.RegisterFrame(lumen.Frame{
+		store.RegisterFrameIfAbsent(lumen.Frame{
 			Name:        cfg.DefaultFrame,
 			Composition: lumen.CompositionBayesian,
 			Decay: lumen.DecayPolicy{
@@ -78,14 +84,14 @@ func New(cfg Config, logger *slog.Logger) (*Server, error) {
 
 func (s *Server) routes() {
 	// Versioned routes (stable API).
-	s.mux.HandleFunc("GET /v1/health",         s.handleHealth)
-	s.mux.HandleFunc("GET /v1/context",        s.handleContext)
-	s.mux.HandleFunc("GET /v1/beliefs",        s.handleListBeliefs)
-	s.mux.HandleFunc("POST /v1/records",       s.handleAssertRecord)
-	s.mux.HandleFunc("POST /v1/believe",       s.handleBelieve)
-	s.mux.HandleFunc("POST /v1/retract",       s.handleRetract)
-	s.mux.HandleFunc("POST /v1/ingest",        s.handleIngest)
-	s.mux.HandleFunc("GET /v1/explain/{id}",   s.handleExplain)
+	s.mux.HandleFunc("GET /v1/health", s.handleHealth)
+	s.mux.HandleFunc("GET /v1/context", s.handleContext)
+	s.mux.HandleFunc("GET /v1/beliefs", s.handleListBeliefs)
+	s.mux.HandleFunc("POST /v1/records", s.handleAssertRecord)
+	s.mux.HandleFunc("POST /v1/believe", s.handleBelieve)
+	s.mux.HandleFunc("POST /v1/retract", s.handleRetract)
+	s.mux.HandleFunc("POST /v1/ingest", s.handleIngest)
+	s.mux.HandleFunc("GET /v1/explain/{id}", s.handleExplain)
 
 	// Legacy redirects — keep existing integrations working.
 	//
@@ -131,7 +137,13 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	}
 	s.logger.Info("lumen server listening", "addr", ln.Addr())
 
-	srv := &http.Server{Handler: s}
+	srv := &http.Server{
+		Handler:           s,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.Serve(ln) }()
 
@@ -147,10 +159,12 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	}
 }
 
-func (s *Server) save() {
+func (s *Server) save() error {
 	if err := lumen.SaveStore(s.store, s.db); err != nil {
 		s.logger.Error("save store", "err", err)
+		return err
 	}
+	return nil
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

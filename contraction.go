@@ -171,6 +171,7 @@ func (s *Store) ApplyContraction(result *ContractionResult, reason string, now t
 	if !ok {
 		return fmt.Errorf("record %s not found", result.Retracted)
 	}
+	s.snapshotRecord(rec, now, reason)
 	rec.Retracted = true
 	rec.RetractedAt = now
 	rec.RetractReason = reason
@@ -202,7 +203,8 @@ func (s *Store) ApplyContraction(result *ContractionResult, reason string, now t
 		delete(s.dependents, bID)
 		s.Graph.RemoveNode(bID)
 		s.Entities.Remove(bID)
-		s.Temporal.Remove(bID)
+		// Preserve the assertion event: contraction is a soft delete, and
+		// historical snapshots must still be able to see the earlier belief.
 	}
 
 	// Clean up dependents index: remove references to deleted beliefs.

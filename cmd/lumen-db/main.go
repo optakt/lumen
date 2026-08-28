@@ -5,23 +5,24 @@
 // Usage: lumen-db [--db path/to/store.db] [--load file.lm]
 //
 // Commands:
-//   load <file.lm>      — load a .lm file into the store (and save)
-//   analyze <file.txt>  — extract beliefs from free text and load them
-//   query <id>          — query a belief's current state
-//   explain <id>        — narrative explanation of a belief
-//   conflict            — scan for epistemic conflicts
-//   timeline            — render assertion history
-//   calibrate           — run calibration check
-//   save                — explicitly save to disk
-//   exit                — exit (also saves)
+//
+//	load <file.lm>      — load a .lm file into the store (and save)
+//	analyze <file.txt>  — extract beliefs from free text and load them
+//	query <id>          — query a belief's current state
+//	explain <id>        — narrative explanation of a belief
+//	conflict            — scan for epistemic conflicts
+//	timeline            — render assertion history
+//	calibrate           — run calibration check
+//	save                — explicitly save to disk
+//	exit                — exit (also saves)
 package main
 
 import (
 	"bufio"
 	"flag"
 	"fmt"
-	"os"
 	"math"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -30,41 +31,16 @@ import (
 	lumen "github.com/optakt/lumen"
 )
 
-// shellSplit splits a command line respecting double-quoted strings.
-// "hello world" becomes a single token without the quotes.
-func shellSplit(s string) []string {
-	var tokens []string
-	var cur []rune
-	inQuote := false
-	for _, r := range s {
-		switch {
-		case r == '"':
-			inQuote = !inQuote
-		case (r == ' ' || r == '\t') && !inQuote:
-			if len(cur) > 0 {
-				tokens = append(tokens, string(cur))
-				cur = cur[:0]
-			}
-		default:
-			cur = append(cur, r)
-		}
-	}
-	if len(cur) > 0 {
-		tokens = append(tokens, string(cur))
-	}
-	return tokens
-}
-
 var defaultFrames = []lumen.Frame{
 	{Name: "philosophical", Decay: lumen.DecayPolicy{Kind: lumen.DecayNone}},
-	{Name: "empirical",     Decay: lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: 5 * 365 * 24 * time.Hour}},
-	{Name: "contemporary",  Decay: lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: 10 * 365 * 24 * time.Hour}},
-	{Name: "reasoning",     Decay: lumen.DecayPolicy{Kind: lumen.DecayNone}},
+	{Name: "empirical", Decay: lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: 5 * 365 * 24 * time.Hour}},
+	{Name: "contemporary", Decay: lumen.DecayPolicy{Kind: lumen.DecayExponential, Halflife: 10 * 365 * 24 * time.Hour}},
+	{Name: "reasoning", Decay: lumen.DecayPolicy{Kind: lumen.DecayNone}},
 }
 
 func main() {
-	dbPath  := flag.String("db",   "lumen.db", "path to BoltDB store")
-	loadLM  := flag.String("load", "",         "load a .lm file on startup")
+	dbPath := flag.String("db", "lumen.db", "path to BoltDB store")
+	loadLM := flag.String("load", "", "load a .lm file on startup")
 	flag.Parse()
 
 	now := time.Now()
@@ -116,8 +92,8 @@ func main() {
 		}
 		now = time.Now()
 		parts := strings.Fields(line)
-		cmd   := parts[0]
-		args  := parts[1:]
+		cmd := parts[0]
+		args := parts[1:]
 
 		switch cmd {
 		case "help":
@@ -129,13 +105,20 @@ func main() {
 		case "export":
 			format := "markdown"
 			outPath := ""
-			if len(args) >= 1 { format = args[0] }
-			if len(args) >= 2 { outPath = args[1] }
+			if len(args) >= 1 {
+				format = args[0]
+			}
+			if len(args) >= 2 {
+				outPath = args[1]
+			}
 			var content string
 			switch format {
 			case "json":
 				data, err := store.ExportJSON(now)
-				if err != nil { fmt.Printf("export error: %v\n", err); continue }
+				if err != nil {
+					fmt.Printf("export error: %v\n", err)
+					continue
+				}
 				content = string(data)
 			case "lm":
 				content = store.ExportLM(now)
@@ -182,7 +165,9 @@ func main() {
 			ts := now
 			for i, a := range args {
 				if a == "at" && i+1 < len(args) {
-					if t, err := time.Parse("2006-01-02", args[i+1]); err == nil { ts = t }
+					if t, err := time.Parse("2006-01-02", args[i+1]); err == nil {
+						ts = t
+					}
 				}
 			}
 			if err := store.Assert(&lumen.Record{ID: rid, Frame: rframe, Content: rcontent, Timestamp: ts}); err != nil {
@@ -208,7 +193,9 @@ func main() {
 			for i, a := range args {
 				if a == "from" && i+1 < len(args) {
 					for _, d := range strings.Split(args[i+1], ",") {
-						if d = strings.TrimSpace(d); d != "" { derivation = append(derivation, d) }
+						if d = strings.TrimSpace(d); d != "" {
+							derivation = append(derivation, d)
+						}
 					}
 				}
 			}
@@ -228,7 +215,9 @@ func main() {
 				continue
 			}
 			reason := ""
-			if len(args) > 1 { reason = strings.Join(args[1:], " ") }
+			if len(args) > 1 {
+				reason = strings.Join(args[1:], " ")
+			}
 			// Preview impact BEFORE retraction (markSuspect changes state).
 			impacted, _ := store.ImpactScan(args[0], now)
 			if err := store.Retract(args[0], reason, now); err != nil {
@@ -240,7 +229,10 @@ func main() {
 				} else {
 					fmt.Printf("retracted %s — %d beliefs now suspect:\n", args[0], len(impacted))
 					for i, e := range impacted {
-						if i >= 5 { fmt.Printf("  ... and %d more\n", len(impacted)-5); break }
+						if i >= 5 {
+							fmt.Printf("  ... and %d more\n", len(impacted)-5)
+							break
+						}
 						fmt.Printf("  %s\n", e.BeliefID)
 					}
 					fmt.Printf("Run 'impact %s' for full details.\n", args[0])
@@ -248,16 +240,25 @@ func main() {
 			}
 
 		case "load":
-			if len(args) == 0 { fmt.Println("usage: load <file.lm>"); continue }
+			if len(args) == 0 {
+				fmt.Println("usage: load <file.lm>")
+				continue
+			}
 			if err := loadFile(store, args[0], now); err != nil {
 				fmt.Printf("error: %v\n", err)
 			} else {
 				lumen.SaveStore(store, db)
 			}
 		case "analyze":
-			if len(args) == 0 { fmt.Println("usage: analyze <file.txt>"); continue }
+			if len(args) == 0 {
+				fmt.Println("usage: analyze <file.txt>")
+				continue
+			}
 			src, err := os.ReadFile(args[0])
-			if err != nil { fmt.Printf("error: %v\n", err); continue }
+			if err != nil {
+				fmt.Printf("error: %v\n", err)
+				continue
+			}
 			analysis := lumen.AnalyzeText(string(src))
 			fmt.Printf("Extracted: %d records, %d beliefs, frame=%s\n",
 				len(analysis.Records), len(analysis.Beliefs), analysis.Frame)
@@ -265,14 +266,26 @@ func main() {
 			loadAnalysis(store, analysis, now)
 			lumen.SaveStore(store, db)
 		case "query":
-			if len(args) == 0 { fmt.Println("usage: query <id>"); continue }
+			if len(args) == 0 {
+				fmt.Println("usage: query <id>")
+				continue
+			}
 			q, err := store.Query(args[0], now)
-			if err != nil { fmt.Printf("not found: %v\n", err); continue }
+			if err != nil {
+				fmt.Printf("not found: %v\n", err)
+				continue
+			}
 			fmt.Printf("[%s] %.0f%% — %s\n", q.Frame, q.CurrentConfidence*100, q.Content)
 		case "provenance":
-			if len(args) == 0 { fmt.Println("usage: provenance <id>"); continue }
+			if len(args) == 0 {
+				fmt.Println("usage: provenance <id>")
+				continue
+			}
 			chain, err := store.ProvenanceChain(args[0], now)
-			if err != nil { fmt.Printf("error: %v\n", err); continue }
+			if err != nil {
+				fmt.Printf("error: %v\n", err)
+				continue
+			}
 			fmt.Print(chain.Render())
 			weak := chain.WeakestLink()
 			if weak != nil {
@@ -282,13 +295,21 @@ func main() {
 			fmt.Printf("Confidence paths:\n")
 			for _, p := range paths {
 				var ids []string
-				for _, step := range p.Steps { ids = append(ids, step.ID) }
+				for _, step := range p.Steps {
+					ids = append(ids, step.ID)
+				}
 				fmt.Printf("  %s → min=%.0f%%\n", strings.Join(ids, " → "), p.MinConfidence()*100)
 			}
 		case "explain":
-			if len(args) == 0 { fmt.Println("usage: explain <id>"); continue }
+			if len(args) == 0 {
+				fmt.Println("usage: explain <id>")
+				continue
+			}
 			expl, err := store.Explain(args[0], now)
-			if err != nil { fmt.Printf("error: %v\n", err); continue }
+			if err != nil {
+				fmt.Printf("error: %v\n", err)
+				continue
+			}
 			fmt.Println(expl)
 		case "validate":
 			// validate — check store for consistency issues
@@ -300,7 +321,11 @@ func main() {
 			errCount, warnCount := 0, 0
 			for _, i := range issues {
 				fmt.Println(" ", i)
-				if i.Kind == "error" { errCount++ } else { warnCount++ }
+				if i.Kind == "error" {
+					errCount++
+				} else {
+					warnCount++
+				}
 			}
 			fmt.Printf("\n%d error(s), %d warning(s)\n", errCount, warnCount)
 
@@ -318,7 +343,9 @@ func main() {
 			fmt.Printf("%d events in timeline\n", len(events))
 			for _, ev := range events {
 				content := store.ContentFor(ev.NodeID)
-				if len(content) > 60 { content = content[:57] + "..." }
+				if len(content) > 60 {
+					content = content[:57] + "..."
+				}
 				fmt.Printf("  %s  %-8s  %s\n", ev.AssertedAt.Format("2006-01-02"), ev.NodeID, content)
 			}
 		case "list":
@@ -328,9 +355,13 @@ func main() {
 			})
 			for _, b := range beliefs {
 				// Skip contracted beliefs — they are soft-deleted.
-				if b.State == lumen.BeliefSuperseded { continue }
+				if b.State == lumen.BeliefSuperseded {
+					continue
+				}
 				stateMarker := ""
-				if b.State == lumen.BeliefSuspect { stateMarker = " ⚠" }
+				if b.State == lumen.BeliefSuspect {
+					stateMarker = " ⚠"
+				}
 				fmt.Printf("  [%s] %.0f%% %-20s  %s%s\n",
 					b.Frame, b.CurrentConfidence*100, b.BeliefID,
 					truncate(b.Content, 55), stateMarker)
@@ -339,10 +370,15 @@ func main() {
 			// calibrate — flag beliefs that may need review.
 			// Flags: low confidence (<50%), suspect state, or stale derivers.
 			beliefs := store.AllBeliefs(now)
-			type flag struct{ level, id, frame, note string; conf float64 }
+			type flag struct {
+				level, id, frame, note string
+				conf                   float64
+			}
 			var flags []flag
 			for _, b := range beliefs {
-				if b.State == lumen.BeliefSuperseded { continue }
+				if b.State == lumen.BeliefSuperseded {
+					continue
+				}
 				switch {
 				case b.State == lumen.BeliefSuspect:
 					flags = append(flags, flag{"SUSPECT", b.BeliefID, b.Frame, "one or more sources retracted", b.CurrentConfidence})
@@ -354,7 +390,9 @@ func main() {
 			}
 			// Also check for stale derivers (on active beliefs only).
 			for _, b := range beliefs {
-				if b.State != lumen.BeliefActive { continue }
+				if b.State != lumen.BeliefActive {
+					continue
+				}
 				if stale := store.StaleDerivers(b.BeliefID, now); len(stale) > 0 {
 					flags = append(flags, flag{"STALE", b.BeliefID, b.Frame,
 						fmt.Sprintf("derives from stale sources: %s", strings.Join(stale, ", ")),
@@ -367,28 +405,49 @@ func main() {
 			}
 			for _, f := range flags {
 				content := store.ContentFor(f.id)
-				if len(content) > 50 { content = content[:47] + "..." }
+				if len(content) > 50 {
+					content = content[:47] + "..."
+				}
 				fmt.Printf("  [%-7s]  %-30s  [%s]  %s\n", f.level, f.id, f.frame, f.note)
-				if content != "" { fmt.Printf("           %q\n", content) }
+				if content != "" {
+					fmt.Printf("           %q\n", content)
+				}
 			}
 		case "search":
-			if len(args) == 0 { fmt.Println("usage: search <terms>"); continue }
+			if len(args) == 0 {
+				fmt.Println("usage: search <terms>")
+				continue
+			}
 			query := strings.Join(args, " ")
 			results := store.CachedSearch(query, 10)
-			if len(results) == 0 { fmt.Println("No results."); continue }
+			if len(results) == 0 {
+				fmt.Println("No results.")
+				continue
+			}
 			for _, r := range results {
 				fmt.Printf("  [%.2f] %-8s %-20s  %s\n",
 					r.Similarity, r.Kind, r.NodeID, truncate(r.Content, 55))
 			}
 		case "find":
-			if len(args) == 0 { fmt.Println("usage: find <query>  e.g. find confidence > 0.7 AND frame = philosophical"); continue }
+			if len(args) == 0 {
+				fmt.Println("usage: find <query>  e.g. find confidence > 0.7 AND frame = philosophical")
+				continue
+			}
 			qstr := strings.Join(args, " ")
 			matches, err := store.QueryBeliefs(qstr, now)
-			if err != nil { fmt.Printf("query error: %v\n", err); continue }
-			if len(matches) == 0 { fmt.Println("No matches."); continue }
+			if err != nil {
+				fmt.Printf("query error: %v\n", err)
+				continue
+			}
+			if len(matches) == 0 {
+				fmt.Println("No matches.")
+				continue
+			}
 			for _, m := range matches {
 				state := ""
-				if m.State == lumen.BeliefSuspect { state = " [SUSPECT]" }
+				if m.State == lumen.BeliefSuspect {
+					state = " [SUSPECT]"
+				}
 				fmt.Printf("  [%s] %.0f%%%s %-20s  %s\n",
 					m.Frame, m.CurrentConfidence*100, state, m.BeliefID,
 					truncate(m.Content, 55))
@@ -424,8 +483,12 @@ func main() {
 			}
 			for _, q := range all {
 				fmt.Printf("  %-20s  target=%-15s  select=%s", q.ID, q.Target, q.Select)
-				if q.Since != "" { fmt.Printf("  since=%s", q.Since) }
-				if q.Where != "" { fmt.Printf("  where=%s", q.Where) }
+				if q.Since != "" {
+					fmt.Printf("  since=%s", q.Since)
+				}
+				if q.Where != "" {
+					fmt.Printf("  where=%s", q.Where)
+				}
 				fmt.Println()
 			}
 		case "run":
@@ -529,7 +592,7 @@ func main() {
 				continue
 			}
 			fullMid := (full.Lo + full.Hi) / 2
-			cfMid   := (cf.Lo + cf.Hi) / 2
+			cfMid := (cf.Lo + cf.Hi) / 2
 			fmt.Printf("Belief:   %s\n", args[0])
 			fmt.Printf("Excluding: %s\n", args[1])
 			fmt.Printf("Full confidence:         [%.1f%%, %.1f%%]  mid=%.1f%%\n", full.Lo*100, full.Hi*100, fullMid*100)
@@ -560,37 +623,51 @@ func main() {
 			fmt.Printf("Impact of retracting %s — %d beliefs affected:\n\n", args[0], len(entries))
 			for i, e := range entries {
 				dropStr := fmt.Sprintf("−%.0f pp", e.Drop*100)
-				if e.Drop < 0.001 { dropStr = "stable" }
+				if e.Drop < 0.001 {
+					dropStr = "stable"
+				}
 				linkStr := "transitive"
-				if e.DirectlyLinked { linkStr = "direct" }
+				if e.DirectlyLinked {
+					linkStr = "direct"
+				}
 				fmt.Printf("  %2d.  [%3.0f%% → %3.0f%%]  %s  %s (hop %d)\n",
 					i+1, e.CurrentConf*100, e.EstimatedConf*100, dropStr, e.BeliefID, e.Distance)
 				fmt.Printf("       %s\n", linkStr)
 				content := e.BeliefContent
-				if len(content) > 70 { content = content[:67] + "..." }
+				if len(content) > 70 {
+					content = content[:67] + "..."
+				}
 				fmt.Printf("       %q\n\n", content)
 			}
 
 		case "fragility":
 			// fragility [n] — store-wide fragility scan, ranked by drop
 			n := 10
-			if len(args) > 0 { fmt.Sscanf(args[0], "%d", &n) }
+			if len(args) > 0 {
+				fmt.Sscanf(args[0], "%d", &n)
+			}
 			entries := store.FragilityScan(now)
 			if len(entries) == 0 {
 				fmt.Println("no beliefs with derivation sources to scan")
 				continue
 			}
-			if n > len(entries) { n = len(entries) }
+			if n > len(entries) {
+				n = len(entries)
+			}
 			fmt.Printf("Fragility scan — top %d (most fragile first):\n\n", n)
 			for i, e := range entries[:n] {
 				dropStr := fmt.Sprintf("−%.0f pp", e.Drop*100)
-				if e.Drop < 0.001 { dropStr = "stable" }
+				if e.Drop < 0.001 {
+					dropStr = "stable"
+				}
 				fmt.Printf("  %2d.  [%3.0f%% → %3.0f%%]  %s  %s\n",
 					i+1, e.CurrentConf*100, e.ConfWithout*100, dropStr, e.BeliefID)
 				fmt.Printf("       weakest: %s (%s)  min-cut: %d  total sources: %d\n",
 					e.WeakestSource, e.WeakestKind, e.MinCut, e.TotalSources)
 				content := e.BeliefContent
-				if len(content) > 70 { content = content[:67] + "..." }
+				if len(content) > 70 {
+					content = content[:67] + "..."
+				}
 				fmt.Printf("       %q\n\n", content)
 			}
 
@@ -607,17 +684,29 @@ func main() {
 			}
 			fmt.Printf("Provenance depth: %d  Records: %d\n\n", chain.MaxDepth, chain.TotalRecords)
 			// Show sources sorted by confidence (ascending = most fragile first).
-			type srcLine struct{ id string; conf float64; kind string; foundational bool; retracted bool }
+			type srcLine struct {
+				id           string
+				conf         float64
+				kind         string
+				foundational bool
+				retracted    bool
+			}
 			var sources []srcLine
 			for id, node := range chain.Nodes {
-				if id == chain.Root { continue }
+				if id == chain.Root {
+					continue
+				}
 				sources = append(sources, srcLine{id, node.Confidence, node.Kind, node.Foundational, node.Retracted})
 			}
 			sort.Slice(sources, func(i, j int) bool { return sources[i].conf < sources[j].conf })
 			for _, s := range sources {
 				marker := ""
-				if s.foundational { marker = " ⚑ foundational" }
-				if s.retracted    { marker = " ✗ RETRACTED" }
+				if s.foundational {
+					marker = " ⚑ foundational"
+				}
+				if s.retracted {
+					marker = " ✗ RETRACTED"
+				}
 				fmt.Printf("  %5.0f%%  %-8s  %-30s%s\n", s.conf*100, s.kind, s.id, marker)
 			}
 			if wl := chain.WeakestLink(); wl != nil {
@@ -660,9 +749,12 @@ func main() {
 			var nActive, nSuspect, nContracted int
 			for _, b := range beliefs {
 				switch b.State {
-				case lumen.BeliefActive:    nActive++
-				case lumen.BeliefSuspect:   nSuspect++
-				case lumen.BeliefSuperseded: nContracted++
+				case lumen.BeliefActive:
+					nActive++
+				case lumen.BeliefSuspect:
+					nSuspect++
+				case lumen.BeliefSuperseded:
+					nContracted++
 				}
 			}
 			fmt.Printf("Beliefs: %d (%d active, %d suspect, %d contracted)\n",
@@ -670,7 +762,9 @@ func main() {
 			fmt.Printf("Records: %d\n", store.RecordCount())
 			gstats := store.Graph.Stats()
 			var parts []string
-			for k, v := range gstats { parts = append(parts, fmt.Sprintf("%s=%d", k, v)) }
+			for k, v := range gstats {
+				parts = append(parts, fmt.Sprintf("%s=%d", k, v))
+			}
 			sort.Strings(parts)
 			fmt.Printf("Graph:   %s\n", strings.Join(parts, " "))
 			ec, mc := store.Entities.EntityStats()
@@ -699,7 +793,7 @@ func main() {
 			snap := store.SnapshotAt(snapDate)
 			snapBeliefs := snap.AllBeliefs(snapDate)
 			fmt.Printf("── snapshot at %s — %d beliefs ──\n", args[0], len(snapBeliefs))
-			snapCmd  := args[1]
+			snapCmd := args[1]
 			snapArgs := args[2:]
 			switch snapCmd {
 			case "list":
@@ -707,48 +801,78 @@ func main() {
 					return snapBeliefs[i].CurrentConfidence > snapBeliefs[j].CurrentConfidence
 				})
 				for _, b := range snapBeliefs {
-					if b.State == lumen.BeliefSuperseded { continue }
+					if b.State == lumen.BeliefSuperseded {
+						continue
+					}
 					stateMarker := ""
-					if b.State == lumen.BeliefSuspect { stateMarker = " ⚠" }
+					if b.State == lumen.BeliefSuspect {
+						stateMarker = " ⚠"
+					}
 					fmt.Printf("  [%s] %.0f%% %-20s  %s%s\n",
 						b.Frame, b.CurrentConfidence*100, b.BeliefID,
 						truncate(b.Content, 55), stateMarker)
 				}
 			case "query":
-				if len(snapArgs) == 0 { fmt.Println("snapshot query: need belief ID"); break }
+				if len(snapArgs) == 0 {
+					fmt.Println("snapshot query: need belief ID")
+					break
+				}
 				qr, qErr := snap.Query(snapArgs[0], snapDate)
-				if qErr != nil { fmt.Printf("not found in snapshot: %v\n", qErr); break }
+				if qErr != nil {
+					fmt.Printf("not found in snapshot: %v\n", qErr)
+					break
+				}
 				fmt.Printf("[%s] %.0f%% — %s\n", qr.Frame, qr.CurrentConfidence*100, qr.Content)
 			case "explain":
-				if len(snapArgs) == 0 { fmt.Println("snapshot explain: need belief ID"); break }
+				if len(snapArgs) == 0 {
+					fmt.Println("snapshot explain: need belief ID")
+					break
+				}
 				expl, eErr := snap.Explain(snapArgs[0], snapDate)
-				if eErr != nil { fmt.Printf("error: %v\n", eErr); break }
+				if eErr != nil {
+					fmt.Printf("error: %v\n", eErr)
+					break
+				}
 				fmt.Println(expl)
 			case "fragility":
 				n := 10
-				if len(snapArgs) > 0 { fmt.Sscanf(snapArgs[0], "%d", &n) }
+				if len(snapArgs) > 0 {
+					fmt.Sscanf(snapArgs[0], "%d", &n)
+				}
 				entries := snap.FragilityScan(snapDate)
-				if len(entries) == 0 { fmt.Println("no beliefs with sources to scan"); break }
-				if n > len(entries) { n = len(entries) }
+				if len(entries) == 0 {
+					fmt.Println("no beliefs with sources to scan")
+					break
+				}
+				if n > len(entries) {
+					n = len(entries)
+				}
 				fmt.Printf("Fragility in snapshot — top %d:\n\n", n)
 				for i, e := range entries[:n] {
 					dropStr := fmt.Sprintf("−%.0f pp", e.Drop*100)
-					if e.Drop < 0.001 { dropStr = "stable" }
+					if e.Drop < 0.001 {
+						dropStr = "stable"
+					}
 					fmt.Printf("  %2d.  [%3.0f%% → %3.0f%%]  %s  %s\n",
 						i+1, e.CurrentConf*100, e.ConfWithout*100, dropStr, e.BeliefID)
 					fmt.Printf("       weakest: %s (%s)  min-cut: %d\n",
 						e.WeakestSource, e.WeakestKind, e.MinCut)
 					content := e.BeliefContent
-					if len(content) > 70 { content = content[:67] + "..." }
+					if len(content) > 70 {
+						content = content[:67] + "..."
+					}
 					fmt.Printf("       %q\n\n", content)
 				}
 			case "stats":
 				var na, ns, nc int
 				for _, b := range snapBeliefs {
 					switch b.State {
-					case lumen.BeliefActive:     na++
-					case lumen.BeliefSuspect:    ns++
-					case lumen.BeliefSuperseded: nc++
+					case lumen.BeliefActive:
+						na++
+					case lumen.BeliefSuspect:
+						ns++
+					case lumen.BeliefSuperseded:
+						nc++
 					}
 				}
 				fmt.Printf("Beliefs: %d (%d active, %d suspect, %d contracted)\n",
@@ -868,7 +992,9 @@ Epistemics
 }
 
 func truncate(s string, n int) string {
-	if len(s) <= n { return s }
+	if len(s) <= n {
+		return s
+	}
 	return s[:n-3] + "..."
 }
 

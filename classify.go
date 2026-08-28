@@ -23,8 +23,8 @@ const (
 
 // ClaimClassification holds the classification result for a sentence.
 type ClaimClassification struct {
-	Kind       ClaimKind
-	KindName   string
+	Kind     ClaimKind
+	KindName string
 	// Attribution-specific: who is attributed
 	Attributee string
 	// BaseConfidence is the suggested confidence before hedge/strength adjustment.
@@ -35,11 +35,6 @@ type ClaimClassification struct {
 	// False means it should be stored as a belief (derived/positional).
 	IsRecord bool
 }
-
-// attributionVerbs are verbs that introduce attributed claims.
-var attributionVerbs = regexp.MustCompile(
-	`(?i)\b(argues?|claims?|holds?|maintains?|contends?|asserts?|proposes?|suggests?|writes?|states?|notes?|observes?|points? out|concludes?|finds?|believes?|shows?)\b`,
-)
 
 // attributionSubjects matches typical attribution openings.
 // Requires the subject to be a proper noun (not "The", "This", "That", "These", etc.)

@@ -58,7 +58,9 @@ func IntervalMin(a, b ConfidenceInterval) ConfidenceInterval {
 // IntervalDecay applies exponential decay to an interval.
 // Both endpoints decay at the same rate.
 func IntervalDecay(ci ConfidenceInterval, elapsed, halflife float64) ConfidenceInterval {
-	if halflife <= 0 { return ci }
+	if halflife <= 0 {
+		return ci
+	}
 	factor := math.Exp(-elapsed / halflife * math.Ln2)
 	return ConfidenceInterval{
 		Lo: ci.Lo * factor,
@@ -132,7 +134,7 @@ func (s *Store) IntervalChain(beliefID string, now time.Time) (map[string]ChainI
 			}
 		}
 
-				// Belief: start with declared confidence as a degenerate prior interval.
+		// Belief: start with declared confidence as a degenerate prior interval.
 		var declaredConf float64
 		if bl, ok := s.beliefs[nodeID]; ok {
 			frame := s.frames[bl.Frame]
@@ -172,7 +174,9 @@ func (s *Store) IntervalChain(beliefID string, now time.Time) (map[string]ChainI
 					eps := 1e-6
 					lrLo := math.Max(eps, math.Min(100, parentInterval.Lo/(1-parentInterval.Lo+eps)))
 					lrHi := math.Min(100, parentInterval.Hi/(1-parentInterval.Hi+eps))
-					if lrHi < lrLo { lrHi = lrLo }
+					if lrHi < lrLo {
+						lrHi = lrLo
+					}
 					// CredalBayesUpdate also requires Confidence > 0; we pass 1.0 (fully observed).
 					evidence := []CredalEvidence{{
 						LRLo:       lrLo,
@@ -195,14 +199,13 @@ func (s *Store) IntervalChain(beliefID string, now time.Time) (map[string]ChainI
 		intervals[nodeID] = ChainInterval{
 			NodeID:   nodeID,
 			Kind:     "belief",
-			Interval: ConfidenceInterval{Lo: priorInterval.Lo, Hi: priorInterval.Hi},
+			Interval: ConfidenceInterval(priorInterval),
 			Depth:    node.Depth,
 		}
 	}
 
 	return intervals, nil
 }
-
 
 // IntervalSummary renders the interval chain as a readable report.
 func IntervalSummary(belief string, intervals map[string]ChainInterval, chain *ProvenanceChain) string {
@@ -324,7 +327,7 @@ func (s *Store) intervalChainSkip(beliefID, skipID string, chain *ProvenanceChai
 				}
 			}
 		}
-		intervals[nodeID] = ChainInterval{nodeID, "belief", ConfidenceInterval{Lo: priorInterval.Lo, Hi: priorInterval.Hi}, node.Depth}
+		intervals[nodeID] = ChainInterval{nodeID, "belief", ConfidenceInterval(priorInterval), node.Depth}
 	}
 
 	ci, ok := intervals[beliefID]
