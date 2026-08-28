@@ -1,0 +1,5 @@
+[
+  {"name":"kimi-k3","model":"kimi-k3","url":"https://api.moonshot.ai/anthropic","api_key_env":"MOONSHOT_API_KEY","plugin":"messages"},
+  {"name":"qwen3.8-max","model":"qwen3.8-max","url":"https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1","api_key_env":"DASHSCOPE_API_KEY","plugin":"completions"},
+  {"name":"glm-5.3","model":"glm-5.3","url":"https://api.z.ai/api/anthropic","api_key_env":"ZAI_API_KEY","plugin":"messages"}
+]
