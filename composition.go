@@ -10,8 +10,8 @@ import (
 // LikelihoodRatio is P(evidence | hypothesis true) / P(evidence | hypothesis false).
 // A ratio > 1 supports the hypothesis; < 1 undermines it; = 1 is neutral.
 type Evidence struct {
-	SourceID       string
-	Confidence     float64 // confidence in the source belief/record
+	SourceID        string
+	Confidence      float64 // confidence in the source belief/record
 	LikelihoodRatio float64 // how much this evidence shifts the posterior
 }
 
@@ -19,20 +19,21 @@ type Evidence struct {
 // given a prior and a set of evidence items with likelihood ratios.
 //
 // Uses the log-odds form for numerical stability:
-//   log_odds(posterior) = log_odds(prior) + sum(log(LR_i * conf_i + (1 - conf_i)))
+//
+//	log_odds(posterior) = log_odds(prior) + sum(log(LR_i * conf_i + (1 - conf_i)))
 //
 // The confidence weighting on each LR reflects that uncertain sources
 // contribute less diagnostic power: a 50% confident source with LR=10
 // contributes less than a 95% confident source with LR=10.
 func BayesianCompose(prior float64, evidence []Evidence) (float64, error) {
-	if prior <= 0 || prior >= 1 {
+	if math.IsNaN(prior) || math.IsInf(prior, 0) || prior <= 0 || prior >= 1 {
 		return 0, fmt.Errorf("prior must be in (0, 1), got %.4f", prior)
 	}
 	for _, e := range evidence {
-		if e.LikelihoodRatio <= 0 {
+		if math.IsNaN(e.LikelihoodRatio) || math.IsInf(e.LikelihoodRatio, 0) || e.LikelihoodRatio <= 0 {
 			return 0, fmt.Errorf("likelihood ratio must be positive, got %.4f for %s", e.LikelihoodRatio, e.SourceID)
 		}
-		if e.Confidence <= 0 || e.Confidence > 1 {
+		if math.IsNaN(e.Confidence) || math.IsInf(e.Confidence, 0) || e.Confidence <= 0 || e.Confidence > 1 {
 			return 0, fmt.Errorf("confidence must be in (0, 1], got %.4f for %s", e.Confidence, e.SourceID)
 		}
 	}
@@ -63,6 +64,13 @@ type DempsterShaferMass struct {
 
 // Normalize ensures masses sum to 1.
 func (m *DempsterShaferMass) Normalize() error {
+	for name, value := range map[string]float64{
+		"true": m.MassTrue, "false": m.MassFalse, "unknown": m.MassUnknown,
+	} {
+		if math.IsNaN(value) || math.IsInf(value, 0) || value < 0 || value > 1 {
+			return fmt.Errorf("DS mass %s for %s must be in [0, 1], got %.4f", name, m.SourceID, value)
+		}
+	}
 	total := m.MassTrue + m.MassFalse + m.MassUnknown
 	if math.Abs(total-1.0) > 0.001 {
 		return fmt.Errorf("DS masses for %s sum to %.4f, must sum to 1.0", m.SourceID, total)
@@ -77,6 +85,12 @@ func (m *DempsterShaferMass) Normalize() error {
 // Returns (belief in true, plausibility of true, conflict K).
 // High K indicates the evidence sources are contradicting each other.
 func DempsterShaferCompose(m1, m2 DempsterShaferMass) (belief, plausibility, conflict float64, err error) {
+	if err := m1.Normalize(); err != nil {
+		return 0, 0, 0, err
+	}
+	if err := m2.Normalize(); err != nil {
+		return 0, 0, 0, err
+	}
 	// Dempster's rule for two sources over {T, F, Θ} where Θ = {T,F}:
 	// Focal elements after combination (before normalization by 1-K):
 	//   {T}: m1(T)*m2(T) + m1(T)*m2(Θ) + m1(Θ)*m2(T)
@@ -107,17 +121,17 @@ func DempsterShaferCompose(m1, m2 DempsterShaferMass) (belief, plausibility, con
 
 // ComposedBelief wraps a belief with explicit composition metadata.
 type ComposedBelief struct {
-	ID                 string
-	Content            string
-	Frame              string
-	Prior              float64
-	Evidence           []Evidence
-	ComputedConfidence float64
-	DeclaredConfidence float64
-	Discrepancy        float64 // |computed - declared|; 0 means asserter is well-calibrated
-	OverconfidenceWarn bool    // true if declared > computed by threshold
-	UnderconfidenceWarn bool   // true if declared < computed by threshold
-	Method             string  // "bayesian" or "dempster-shafer"
+	ID                  string
+	Content             string
+	Frame               string
+	Prior               float64
+	Evidence            []Evidence
+	ComputedConfidence  float64
+	DeclaredConfidence  float64
+	Discrepancy         float64 // |computed - declared|; 0 means asserter is well-calibrated
+	OverconfidenceWarn  bool    // true if declared > computed by threshold
+	UnderconfidenceWarn bool    // true if declared < computed by threshold
+	Method              string  // "bayesian" or "dempster-shafer"
 }
 
 // ValidateConfidence checks whether the asserter's declared confidence
@@ -194,12 +208,20 @@ type CorrelatedEvidence struct {
 // This is a heuristic adjustment, not a full multivariate model — it prevents the
 // most egregious double-counting without requiring a complete joint distribution.
 func BayesianComposeCorrelated(prior float64, evidence []CorrelatedEvidence) (float64, error) {
-	if prior <= 0 || prior >= 1 {
+	if math.IsNaN(prior) || math.IsInf(prior, 0) || prior <= 0 || prior >= 1 {
 		return 0, fmt.Errorf("prior must be in (0, 1), got %.4f", prior)
 	}
 	for _, e := range evidence {
-		if e.LikelihoodRatio <= 0 {
+		if math.IsNaN(e.LikelihoodRatio) || math.IsInf(e.LikelihoodRatio, 0) || e.LikelihoodRatio <= 0 {
 			return 0, fmt.Errorf("likelihood ratio must be positive for %s", e.SourceID)
+		}
+		if math.IsNaN(e.Confidence) || math.IsInf(e.Confidence, 0) || e.Confidence <= 0 || e.Confidence > 1 {
+			return 0, fmt.Errorf("confidence must be in (0, 1] for %s", e.SourceID)
+		}
+		for sourceID, correlation := range e.CorrelationWith {
+			if math.IsNaN(correlation) || math.IsInf(correlation, 0) || correlation < 0 || correlation > 1 {
+				return 0, fmt.Errorf("correlation %s→%s must be in [0, 1]", e.SourceID, sourceID)
+			}
 		}
 	}
 
@@ -264,20 +286,24 @@ func CompareNaiveVsCorrelated(prior float64, evidence []CorrelatedEvidence) (*Ev
 	for i, ei := range evidence {
 		totalCorr := 0.0
 		for j, ej := range evidence {
-			if i == j { continue }
+			if i == j {
+				continue
+			}
 			if r, ok := ei.CorrelationWith[ej.SourceID]; ok {
 				totalCorr += r
 			}
 		}
 		w := 1.0 - (totalCorr / 2.0)
-		if w < 0.1 { w = 0.1 }
+		if w < 0.1 {
+			w = 0.1
+		}
 		weights[ei.SourceID] = w
 	}
 
 	return &EvidenceCorrelationReport{
-		NaivePosterior:    naive,
-		AdjustedPosterior: adjusted,
+		NaivePosterior:      naive,
+		AdjustedPosterior:   adjusted,
 		OvercountingReduced: naive - adjusted,
-		SourceWeights:     weights,
+		SourceWeights:       weights,
 	}, nil
 }

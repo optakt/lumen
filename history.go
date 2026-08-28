@@ -9,11 +9,11 @@ import (
 // ConfidenceChange records a moment when a belief's effective confidence
 // crossed a threshold due to decay, retraction of a dependency, or explicit update.
 type ConfidenceChange struct {
-	At          time.Time
-	BeliefID    string
-	OldConf     float64
-	NewConf     float64
-	Reason      string
+	At       time.Time
+	BeliefID string
+	OldConf  float64
+	NewConf  float64
+	Reason   string
 }
 
 // EpistemicTrace returns a human-readable trace of a belief's history:
@@ -92,6 +92,15 @@ func (s *Store) EpistemicTrace(beliefID string, now time.Time) (string, error) {
 // in the interval [from, to], sampled at samplePoints. This is a simple simulation
 // of the epistemic archaeology query from the design document.
 func (s *Store) WhatChangedMyMind(beliefID string, from, to time.Time, threshold float64, samples int) ([]ConfidenceChange, error) {
+	if samples <= 0 {
+		return nil, fmt.Errorf("samples must be positive")
+	}
+	if to.Before(from) {
+		return nil, fmt.Errorf("end time must not precede start time")
+	}
+	if threshold < 0 {
+		return nil, fmt.Errorf("threshold must not be negative")
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 

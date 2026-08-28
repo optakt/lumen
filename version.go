@@ -7,19 +7,39 @@ import (
 	"time"
 )
 
+// RecordVersion captures a record immediately before a revision or retraction.
+type RecordVersion struct {
+	Record       Record
+	ChangedAt    time.Time
+	ChangeReason string
+}
+
+func (s *Store) snapshotRecord(record *Record, changedAt time.Time, reason string) {
+	copyRecord := cloneRecord(record)
+	s.recordVersions[record.ID] = append(s.recordVersions[record.ID], RecordVersion{
+		Record: *copyRecord, ChangedAt: changedAt, ChangeReason: reason,
+	})
+}
+
 // BeliefVersion records the state of a belief at a specific point in time.
 // Versions are created automatically when a belief is materially changed
 // via ReAssert or Revise.
 type BeliefVersion struct {
-	Version      int
-	Content      string
-	Confidence   float64
-	Frame        string
-	State        BeliefState
-	Derivation   []string  // source IDs at the time of snapshot; nil = unchanged from previous
-	AssertedAt   time.Time
-	ChangedAt    time.Time
-	ChangeReason string
+	Version             int
+	Content             string
+	Confidence          float64
+	Frame               string
+	State               BeliefState
+	Derivation          []string // source IDs at the time of snapshot; nil = unchanged from previous
+	ContractedBy        string
+	ImportedDecay       []DecayPolicy
+	DecayOverride       *DecayPolicy
+	CrossFrame          []CrossFrameSource
+	CompositionPrior    float64
+	CompositionEvidence []Evidence
+	AssertedAt          time.Time
+	ChangedAt           time.Time
+	ChangeReason        string
 }
 
 // VersionStore maintains the version history for all beliefs.
@@ -39,19 +59,23 @@ func (vs *VersionStore) Snapshot(b *Belief, changedAt time.Time, reason string) 
 	defer vs.mu.Unlock()
 	history := vs.versions[b.ID]
 	version := len(history) + 1
-	// Copy Derivation so the snapshot is immutable.
-	deriv := make([]string, len(b.Derivation))
-	copy(deriv, b.Derivation)
+	copyBelief := cloneBelief(b)
 	vs.versions[b.ID] = append(vs.versions[b.ID], BeliefVersion{
-		Version:      version,
-		Content:      b.Content,
-		Confidence:   b.Confidence,
-		Frame:        b.Frame,
-		State:        b.State,
-		Derivation:   deriv,
-		AssertedAt:   b.AssertedAt,
-		ChangedAt:    changedAt,
-		ChangeReason: reason,
+		Version:             version,
+		Content:             b.Content,
+		Confidence:          b.Confidence,
+		Frame:               b.Frame,
+		State:               b.State,
+		Derivation:          copyBelief.Derivation,
+		ContractedBy:        copyBelief.ContractedBy,
+		ImportedDecay:       copyBelief.ImportedDecay,
+		DecayOverride:       copyBelief.DecayOverride,
+		CrossFrame:          copyBelief.CrossFrame,
+		CompositionPrior:    copyBelief.CompositionPrior,
+		CompositionEvidence: copyBelief.CompositionEvidence,
+		AssertedAt:          b.AssertedAt,
+		ChangedAt:           changedAt,
+		ChangeReason:        reason,
 	})
 }
 
@@ -61,7 +85,9 @@ func (vs *VersionStore) History(beliefID string) []BeliefVersion {
 	defer vs.mu.RUnlock()
 	h := vs.versions[beliefID]
 	result := make([]BeliefVersion, len(h))
-	copy(result, h)
+	for i := range h {
+		result[i] = cloneBeliefVersion(h[i])
+	}
 	return result
 }
 
@@ -73,12 +99,35 @@ func (vs *VersionStore) VersionAt(beliefID string, t time.Time) *BeliefVersion {
 	history := vs.versions[beliefID]
 	var best *BeliefVersion
 	for i := range history {
-		v := &history[i]
+		v := history[i]
 		if !v.AssertedAt.After(t) {
-			best = v
+			copyV := cloneBeliefVersion(v)
+			best = &copyV
 		}
 	}
 	return best
+}
+
+func cloneBeliefVersion(v BeliefVersion) BeliefVersion {
+	v.Derivation = append([]string(nil), v.Derivation...)
+	v.ImportedDecay = append([]DecayPolicy(nil), v.ImportedDecay...)
+	v.CrossFrame = append([]CrossFrameSource(nil), v.CrossFrame...)
+	v.CompositionEvidence = append([]Evidence(nil), v.CompositionEvidence...)
+	if v.DecayOverride != nil {
+		copyDecay := *v.DecayOverride
+		v.DecayOverride = &copyDecay
+	}
+	return v
+}
+
+func cloneRecordVersions(history []RecordVersion) []RecordVersion {
+	result := make([]RecordVersion, len(history))
+	for i := range history {
+		result[i] = history[i]
+		copyRecord := cloneRecord(&history[i].Record)
+		result[i].Record = *copyRecord
+	}
+	return result
 }
 
 // Diff returns a human-readable description of what changed between two versions.
@@ -103,7 +152,9 @@ func Diff(a, b BeliefVersion) string {
 }
 
 func truncateDiff(s string) string {
-	if len(s) > 50 { return s[:47] + "..." }
+	if len(s) > 50 {
+		return s[:47] + "..."
+	}
 	return s
 }
 

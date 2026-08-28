@@ -1,7 +1,6 @@
 package lumen
 
 import (
-	"fmt"
 	"testing"
 	"time"
 )
@@ -55,7 +54,7 @@ func TestSuggestFrameContemporary(t *testing.T) {
 func TestSuggestFrameForBelief(t *testing.T) {
 	s := NewStore()
 	now := time.Now()
-	s.RegisterFrame(Frame{Name: "empirical",     Decay: DecayPolicy{Kind: DecayNone}})
+	s.RegisterFrame(Frame{Name: "empirical", Decay: DecayPolicy{Kind: DecayNone}})
 	s.RegisterFrame(Frame{Name: "philosophical", Decay: DecayPolicy{Kind: DecayNone}})
 
 	s.Assert(&Record{ID: "r1", Frame: "empirical", Content: "Study found significant correlation", Timestamp: now})
@@ -71,12 +70,4 @@ func TestSuggestFrameForBelief(t *testing.T) {
 	if suggestion.Frame != "philosophical" {
 		t.Errorf("expected philosophical suggestion for consciousness/qualia content, got %s", suggestion.Frame)
 	}
-}
-
-func formatScores(m map[string]float64) string {
-	var parts []string
-	for k, v := range m {
-		parts = append(parts, fmt.Sprintf("%s=%.2f", k, v))
-	}
-	return fmt.Sprint(parts)
 }

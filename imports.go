@@ -11,6 +11,14 @@ import (
 // returning a merged ParseResult. Cycles are detected and returned as errors.
 // basePath is the directory from which relative import paths are resolved.
 func ResolveImports(src, basePath string, visited map[string]bool) (*ParseResult, error) {
+	stack := make(map[string]bool, len(visited))
+	for path, active := range visited {
+		stack[path] = active
+	}
+	return resolveImports(src, basePath, stack, make(map[string]bool))
+}
+
+func resolveImports(src, basePath string, stack, loaded map[string]bool) (*ParseResult, error) {
 	result, err := ParseFull(src)
 	if err != nil {
 		return nil, fmt.Errorf("parse: %w", err)
@@ -21,24 +29,35 @@ func ResolveImports(src, basePath string, visited map[string]bool) (*ParseResult
 			absPath = filepath.Join(basePath, absPath)
 		}
 		absPath = filepath.Clean(absPath)
-		if visited[absPath] {
+		if stack[absPath] {
 			return nil, fmt.Errorf("import cycle detected: %s", absPath)
 		}
-		visited[absPath] = true
+		if loaded[absPath] {
+			continue
+		}
+
 		impSrc, err := os.ReadFile(absPath)
 		if err != nil {
 			return nil, fmt.Errorf("import %s: %w", imp.Path, err)
 		}
-		impResult, err := ResolveImports(string(impSrc), filepath.Dir(absPath), visited)
+		stack[absPath] = true
+		impResult, err := resolveImports(string(impSrc), filepath.Dir(absPath), stack, loaded)
+		delete(stack, absPath)
 		if err != nil {
 			return nil, fmt.Errorf("import %s: %w", imp.Path, err)
 		}
-		// Merge imported declarations into result (imports' declarations come first)
+		loaded[absPath] = true
+
+		// Imported declarations precede local declarations. Merge every
+		// executable declaration type; dropping queries or retractions changes
+		// the meaning of the imported file.
 		result.Frames = append(impResult.Frames, result.Frames...)
 		result.Records = append(impResult.Records, result.Records...)
 		result.Beliefs = append(impResult.Beliefs, result.Beliefs...)
 		result.Correlations = append(impResult.Correlations, result.Correlations...)
+		result.Retracts = append(impResult.Retracts, result.Retracts...)
 		result.Bridges = append(impResult.Bridges, result.Bridges...)
+		result.Queries = append(impResult.Queries, result.Queries...)
 	}
 	return result, nil
 }
@@ -62,31 +81,20 @@ func LoadFileWithImports(path string, store *Store, now time.Time) error {
 // loadParsed populates a store from a fully resolved ParseResult.
 // Extracted from LoadFile so both code paths share the same logic.
 
-// parseCompositionMode converts a parsed string to CompositionMode.
-// Unknown values default to CompositionBayesian.
-func parseCompositionMode(s string) CompositionMode {
-	m, err := ParseCompositionMode(s)
-	if err != nil {
-		return CompositionBayesian
-	}
-	return m
-}
-
-// parseStaleAction converts a parsed string to StaleAction.
-// Unknown values default to StaleIgnore.
-func parseStaleAction(s string) StaleAction {
-	a, err := ParseStaleAction(s)
-	if err != nil {
-		return StaleIgnore
-	}
-	return a
-}
-
 func loadParsed(result *ParseResult, store *Store, now time.Time) error {
+	declaredFrames := make(map[string]Frame)
 	for _, pf := range result.Frames {
-		store.RegisterFrame(Frame{
+		composition, err := ParseCompositionMode(pf.Composition)
+		if err != nil {
+			return fmt.Errorf("frame %s: %w", pf.Name, err)
+		}
+		staleAction, err := ParseStaleAction(pf.OnStaleDerivation)
+		if err != nil {
+			return fmt.Errorf("frame %s: %w", pf.Name, err)
+		}
+		frame := Frame{
 			Name:                pf.Name,
-			Composition:         parseCompositionMode(pf.Composition),
+			Composition:         composition,
 			Decay:               pf.Decay,
 			ProvenanceDepth:     pf.ProvenanceDepth,
 			ImportedDecayPolicy: pf.ImportedDecayPolicy,
@@ -94,15 +102,30 @@ func loadParsed(result *ParseResult, store *Store, now time.Time) error {
 			OpaqueSource:        pf.OpaqueSource,
 			OpaqueReason:        pf.OpaqueReason,
 			Calibration:         pf.Calibration,
-			OnStaleDerivation:   parseStaleAction(pf.OnStaleDerivation),
-		})
+			OnStaleDerivation:   staleAction,
+		}
+		if existing, ok := declaredFrames[frame.Name]; ok {
+			if existing != frame {
+				return fmt.Errorf("frame %s declared with conflicting definitions", frame.Name)
+			}
+		} else {
+			declaredFrames[frame.Name] = frame
+		}
+		store.RegisterFrame(frame)
 	}
 	for _, pb := range result.Bridges {
-		_ = store.Bridges.Register(&Bridge{
+		bridge := &Bridge{
 			Name: pb.Name, FromFrame: pb.FromFrame, ToFrame: pb.ToFrame,
 			Loss: pb.Loss, Method: pb.Method, Verified: pb.Verified,
 			Assumptions: pb.Assumptions,
-		})
+		}
+		if existing, ok := store.Bridges.Lookup(bridge.Name); ok {
+			if *existing != *bridge {
+				return fmt.Errorf("bridge %s declared with conflicting definitions", bridge.Name)
+			}
+		} else if err := store.Bridges.Register(bridge); err != nil {
+			return err
+		}
 	}
 	for _, pr := range result.Records {
 		ts := now
@@ -154,14 +177,22 @@ func loadParsed(result *ParseResult, store *Store, now time.Time) error {
 			}
 			// Guard prior endpoints away from 0 and 1.
 			eps := 1e-6
-			if prior.Lo <= 0 { prior.Lo = eps }
-			if prior.Hi >= 1 { prior.Hi = 1 - eps }
-			if prior.Lo > prior.Hi { prior.Lo = prior.Hi }
+			if prior.Lo <= 0 {
+				prior.Lo = eps
+			}
+			if prior.Hi >= 1 {
+				prior.Hi = 1 - eps
+			}
+			if prior.Lo > prior.Hi {
+				prior.Lo = prior.Hi
+			}
 
 			var evidence []CredalEvidence
 			for _, ev := range pb.Evidence {
 				evConf := ev.Confidence
-				if evConf <= 0 { evConf = 1.0 }
+				if evConf <= 0 {
+					evConf = 1.0
+				}
 				evidence = append(evidence, CredalEvidence{
 					SourceID:   ev.ID,
 					LRLo:       ev.LRLo,
@@ -196,7 +227,7 @@ func loadParsed(result *ParseResult, store *Store, now time.Time) error {
 	}
 	for _, pr := range result.Retracts {
 		if err := store.Retract(pr.ID, pr.Reason, now); err != nil {
-			_ = err // non-fatal: record may not exist in this file
+			return fmt.Errorf("retract %s: %w", pr.ID, err)
 		}
 	}
 	// Register named queries so they can be executed by ID.

@@ -2,6 +2,7 @@ package lumen
 
 import (
 	"fmt"
+	"math"
 	"sync"
 	"time"
 )
@@ -16,12 +17,15 @@ type Store struct {
 	dependents map[string]map[string]bool
 	// conflictCache caches the result of ConflictScan. It is invalidated
 	// by any mutation that could change the conflict graph. Guarded by mu.
-	conflictCache []Conflict
-	conflictDirty bool
+	conflictCache      []Conflict
+	conflictDirty      bool
+	conflictCacheAt    time.Time
+	conflictGeneration uint64
 	// searchIndex caches the TF-IDF search index. Rebuilt on the first query
 	// after any write. Guarded by mu.
-	searchIndex  *SearchIndex
-	searchDirty  bool
+	searchIndex      *SearchIndex
+	searchDirty      bool
+	searchGeneration uint64
 	// Graph holds the full typed relationship structure.
 	// derivation edges here supersede the dependents map (kept for compatibility).
 	Graph *BeliefGraph
@@ -33,6 +37,9 @@ type Store struct {
 	Temporal *TemporalGraph
 	// versions holds the version history for each belief.
 	versions *VersionStore
+	// recordVersions stores pre-mutation record states for historical snapshots.
+	// Guarded by mu.
+	recordVersions map[string][]RecordVersion
 	// namedQueries holds queries declared in .lm files, keyed by query ID.
 	// Not persisted to BoltDB; re-loaded from the source file on startup.
 	namedQueries map[string]ParsedQuery
@@ -40,18 +47,19 @@ type Store struct {
 
 func NewStore() *Store {
 	return &Store{
-		frames:     make(map[string]Frame),
-		records:    make(map[string]*Record),
-		beliefs:    make(map[string]*Belief),
-		dependents: make(map[string]map[string]bool),
-		conflictDirty: true,
-		searchDirty:  true,
-		Graph:      NewBeliefGraph(),
-		Entities:   NewEntityGraph(),
-		Bridges:    NewBridgeRegistry(),
-		Temporal:   NewTemporalGraph(),
-		versions:     NewVersionStore(),
-		namedQueries:  make(map[string]ParsedQuery),
+		frames:         make(map[string]Frame),
+		records:        make(map[string]*Record),
+		beliefs:        make(map[string]*Belief),
+		dependents:     make(map[string]map[string]bool),
+		conflictDirty:  true,
+		searchDirty:    true,
+		Graph:          NewBeliefGraph(),
+		Entities:       NewEntityGraph(),
+		Bridges:        NewBridgeRegistry(),
+		Temporal:       NewTemporalGraph(),
+		versions:       NewVersionStore(),
+		recordVersions: make(map[string][]RecordVersion),
+		namedQueries:   make(map[string]ParsedQuery),
 	}
 }
 
@@ -60,10 +68,32 @@ func (s *Store) RegisterFrame(f Frame) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.frames[f.Name] = f
+	s.invalidateConflicts()
+}
+
+// RegisterFrameIfAbsent adds f only when no frame with the same name exists.
+// It returns true when the frame was registered. This lets callers provide
+// defaults without overwriting persisted epistemic policy.
+func (s *Store) RegisterFrameIfAbsent(f Frame) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, exists := s.frames[f.Name]; exists {
+		return false
+	}
+	s.frames[f.Name] = f
+	s.invalidateConflicts()
+	return true
 }
 
 // Assert adds a record to the store. Records are immutable once added.
 func (s *Store) Assert(r *Record) error {
+	if r == nil {
+		return fmt.Errorf("record must not be nil")
+	}
+	if r.ID == "" {
+		return fmt.Errorf("record ID must not be empty")
+	}
+	r = cloneRecord(r)
 	s.mu.Lock()
 	if _, exists := s.records[r.ID]; exists {
 		s.mu.Unlock()
@@ -123,9 +153,16 @@ func (s *Store) Reference(fromID, toID string, kind EdgeKind, label string) erro
 // used concurrently, move those calls under the lock.
 func (s *Store) Believe(b *Belief) error {
 	// Validate before taking the lock so we can return early cleanly.
+	if b == nil {
+		return fmt.Errorf("belief must not be nil")
+	}
 	if b.ID == "" {
 		return fmt.Errorf("belief ID must not be empty")
 	}
+	if math.IsNaN(b.Confidence) || math.IsInf(b.Confidence, 0) || b.Confidence < 0 || b.Confidence > 1 {
+		return fmt.Errorf("belief confidence must be in [0, 1]")
+	}
+	b = cloneBelief(b)
 
 	s.mu.Lock()
 
@@ -143,55 +180,59 @@ func (s *Store) Believe(b *Belief) error {
 		return fmt.Errorf("unknown frame %s", b.Frame)
 	}
 
-	// Check derivation sources exist and collect imported decay policies.
+	// Validate every source before mutating any store index. A failed Believe
+	// operation must not leave ghost graph edges or dependents entries behind.
 	var imported []DecayPolicy
+	var crossFrame []CrossFrameSource
+	suspect := b.State == BeliefSuspect
 	for _, srcID := range b.Derivation {
 		if rec, ok := s.records[srcID]; ok {
 			if rec.Retracted {
-				b.State = BeliefSuspect
+				suspect = true
 			}
-			if s.dependents[srcID] == nil {
-				s.dependents[srcID] = make(map[string]bool)
-			}
-			s.dependents[srcID][b.ID] = true
-			s.Graph.AddEdge(Edge{From: srcID, To: b.ID, Kind: EdgeDerives})
-		} else if src, ok := s.beliefs[srcID]; ok {
-			if src.State == BeliefSuspect {
-				b.State = BeliefSuspect
-			}
-			srcFrame := s.frames[src.Frame]
-			if src.Frame != b.Frame {
-				// Cross-frame source: capture snapshot of source confidence at assertion
-				// time (fixes the retrodiction problem). The receiving frame's own decay
-				// applies going forward; the source frame's ongoing decay does not.
-				snapConf := src.CurrentConfidence(srcFrame, b.AssertedAt)
-				b.CrossFrame = append(b.CrossFrame, CrossFrameSource{
-					SourceBeliefID:     srcID,
-					SourceFrame:        src.Frame,
-					ConfidenceAtImport: snapConf,
-					ImportedAt:         b.AssertedAt,
-				})
-				// Keep ImportedDecay for legacy callers; CrossFrame takes precedence
-				// in CurrentConfidence when populated.
-				policy := srcFrame.Decay
-				if src.DecayOverride != nil {
-					policy = *src.DecayOverride
-				}
-				imported = append(imported, policy)
-				imported = append(imported, src.ImportedDecay...)
-			}
-			if s.dependents[srcID] == nil {
-				s.dependents[srcID] = make(map[string]bool)
-			}
-			s.dependents[srcID][b.ID] = true
-			s.Graph.AddEdge(Edge{From: srcID, To: b.ID, Kind: EdgeDerives})
-		} else {
+			continue
+		}
+
+		src, ok := s.beliefs[srcID]
+		if !ok {
 			s.mu.Unlock()
 			return fmt.Errorf("derivation source %s not found", srcID)
 		}
+		if src.State == BeliefSuspect {
+			suspect = true
+		}
+		if src.Frame == b.Frame {
+			continue
+		}
+
+		// Cross-frame source: capture confidence at assertion time. Only the
+		// receiving frame's decay applies after the import.
+		srcFrame := s.frames[src.Frame]
+		crossFrame = append(crossFrame, CrossFrameSource{
+			SourceBeliefID:     srcID,
+			SourceFrame:        src.Frame,
+			ConfidenceAtImport: src.CurrentConfidence(srcFrame, b.AssertedAt),
+			ImportedAt:         b.AssertedAt,
+		})
+		policy := srcFrame.Decay
+		if src.DecayOverride != nil {
+			policy = *src.DecayOverride
+		}
+		imported = append(imported, policy)
+		imported = append(imported, src.ImportedDecay...)
 	}
-	if len(imported) > 0 {
-		b.ImportedDecay = append(b.ImportedDecay, imported...)
+
+	if suspect {
+		b.State = BeliefSuspect
+	}
+	b.CrossFrame = crossFrame
+	b.ImportedDecay = imported
+	for _, srcID := range b.Derivation {
+		if s.dependents[srcID] == nil {
+			s.dependents[srcID] = make(map[string]bool)
+		}
+		s.dependents[srcID][b.ID] = true
+		s.Graph.AddEdge(Edge{From: srcID, To: b.ID, Kind: EdgeDerives})
 	}
 	s.beliefs[b.ID] = b
 	s.invalidateConflicts()
@@ -213,11 +254,14 @@ func (s *Store) Retract(recordID string, reason string, at time.Time) error {
 	if !ok {
 		return fmt.Errorf("record %s not found", recordID)
 	}
+	s.snapshotRecord(rec, at, reason)
 	rec.Retracted = true
 	rec.RetractedAt = at
 	rec.RetractReason = reason
-	// Mark all beliefs derived from this record as suspect (recursive)
-	s.markSuspect(recordID)
+	// Mark all beliefs derived from this record as suspect (recursive).
+	// Snapshot their pre-retraction state so historical views do not leak the
+	// later suspect status into an earlier point in time.
+	s.markSuspect(recordID, at, "source "+recordID+" retracted")
 	s.invalidateConflicts()
 	return nil
 }
@@ -227,10 +271,13 @@ func (s *Store) Retract(recordID string, reason string, at time.Time) error {
 // dependents is kept for now but markSuspect no longer relies on it, so the two
 // cannot diverge after load.
 // Must be called with s.mu held (Graph.ReachableByDerivation takes g.mu internally).
-func (s *Store) markSuspect(id string) {
+func (s *Store) markSuspect(id string, at time.Time, reason string) {
 	reachable := s.Graph.ReachableByDerivation(id)
 	for _, depID := range reachable {
 		if b, ok := s.beliefs[depID]; ok {
+			if b.State != BeliefSuspect {
+				s.versions.Snapshot(b, at, reason)
+			}
 			b.State = BeliefSuspect
 		}
 	}
@@ -336,7 +383,7 @@ func (s *Store) BelieveComposed(b *Belief, prior float64, evidence []Evidence) (
 
 	// Store composition metadata on the belief so it survives persistence
 	// and is available to FragilityScan for sensitivity analysis.
-	b.CompositionPrior    = prior
+	b.CompositionPrior = prior
 	b.CompositionEvidence = evidence
 
 	// Delegate storage to Believe: one path owns graph edges, cross-frame
@@ -367,4 +414,56 @@ func (s *Store) RecordCount() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return len(s.records)
+}
+
+// ValidateBeliefCandidate checks whether b could be added without mutating the
+// store. It is intended for callers that must prepare related records before
+// committing the belief.
+func (s *Store) ValidateBeliefCandidate(b *Belief) error {
+	if b == nil {
+		return fmt.Errorf("belief must not be nil")
+	}
+	if b.ID == "" {
+		return fmt.Errorf("belief ID must not be empty")
+	}
+	if math.IsNaN(b.Confidence) || math.IsInf(b.Confidence, 0) || b.Confidence < 0 || b.Confidence > 1 {
+		return fmt.Errorf("belief confidence must be in [0, 1]")
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if _, exists := s.beliefs[b.ID]; exists {
+		return fmt.Errorf("belief %s already exists", b.ID)
+	}
+	if _, exists := s.records[b.ID]; exists {
+		return fmt.Errorf("ID %s already used by a record", b.ID)
+	}
+	if _, exists := s.frames[b.Frame]; !exists {
+		return fmt.Errorf("unknown frame %s", b.Frame)
+	}
+	for _, sourceID := range b.Derivation {
+		if _, exists := s.records[sourceID]; exists {
+			continue
+		}
+		if _, exists := s.beliefs[sourceID]; exists {
+			continue
+		}
+		return fmt.Errorf("derivation source %s not found", sourceID)
+	}
+	return nil
+}
+
+// HasRecord reports whether a record ID exists in the store.
+func (s *Store) HasRecord(id string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	_, exists := s.records[id]
+	return exists
+}
+
+// Frame returns a frame definition by name.
+func (s *Store) Frame(name string) (Frame, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	frame, exists := s.frames[name]
+	return frame, exists
 }

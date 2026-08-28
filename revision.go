@@ -58,7 +58,12 @@ func (s *Store) Revise(recordID, newContent string, newConfidence float64, reaso
 	}
 
 	oldContent := rec.Content
+	s.snapshotRecord(rec, now, reason)
 	rec.Content = newContent
+	s.Entities.Remove(recordID)
+	s.Entities.ExtractAndIndex(recordID, newContent)
+	s.invalidateSearch()
+	s.invalidateConflicts()
 
 	// Find all beliefs that transitively depend on this record.
 	// Graph.ReachableByDerivation takes g.mu internally; calling under s.mu is safe
@@ -77,7 +82,6 @@ func (s *Store) Revise(recordID, newContent string, newConfidence float64, reaso
 		// Note: we do not auto-scale belief confidence on revision.
 		// The asserter must re-evaluate each suspect belief explicitly via ReAssert.
 	}
-
 
 	// Build unchanged list.
 	var unchanged []string
@@ -119,6 +123,9 @@ func (s *Store) ReAssert(beliefID, newContent string, newConfidence float64, now
 	if !ok {
 		return fmt.Errorf("belief %s not found", beliefID)
 	}
+	if b.State == BeliefSuperseded {
+		return fmt.Errorf("belief %s is superseded and cannot be re-asserted", beliefID)
+	}
 	// Snapshot before mutation
 	s.versions.Snapshot(b, now, "re-asserted")
 	if newContent != "" {
@@ -130,6 +137,11 @@ func (s *Store) ReAssert(beliefID, newContent string, newConfidence float64, now
 	b.State = BeliefActive
 	b.AssertedAt = now
 	s.invalidateConflicts()
+	s.invalidateSearch()
+	if newContent != "" {
+		s.Entities.Remove(b.ID)
+		s.Entities.ExtractAndIndex(b.ID, b.Content)
+	}
 
 	// Refresh cross-frame snapshots: re-assertion is a re-evaluation, so the
 	// imported confidence is re-read from the source's current state. Without
@@ -148,14 +160,4 @@ func (s *Store) ReAssert(beliefID, newContent string, newConfidence float64, now
 		b.CrossFrame[i].ImportedAt = now
 	}
 	return nil
-}
-
-func clamp(v, lo, hi float64) float64 {
-	if v < lo {
-		return lo
-	}
-	if v > hi {
-		return hi
-	}
-	return v
 }

@@ -41,7 +41,7 @@ func ParseDecayKind(s string) (DecayKind, error) {
 	if k, ok := decayKindFromString[s]; ok {
 		return k, nil
 	}
-	return DecayNone, fmt.Errorf("unknown decay kind %q (valid: none, exponential, step)", s)
+	return DecayNone, fmt.Errorf("unknown decay kind %q (valid: none, exponential, step, linear)", s)
 }
 
 func (d DecayKind) MarshalJSON() ([]byte, error) {

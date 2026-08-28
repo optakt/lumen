@@ -11,15 +11,16 @@ import (
 // beliefs and records in the belief store.
 //
 // This is the fourth graph in Lumen's four-graph architecture:
-//   1. BeliefGraph    — derivation and semantic relationships
-//   2. EntityGraph    — named entity co-mention
-//   3. BridgeRegistry — frame-to-frame translation protocols
-//   4. TemporalGraph  — assertion ordering and historical state
+//  1. BeliefGraph    — derivation and semantic relationships
+//  2. EntityGraph    — named entity co-mention
+//  3. BridgeRegistry — frame-to-frame translation protocols
+//  4. TemporalGraph  — assertion ordering and historical state
 //
 // The temporal graph enables counterfactual queries:
-//   "What did the store believe about X before record R was asserted?"
-//   "Which beliefs could not have existed without record R?"
-//   "What was the earliest time at which belief B was supportable?"
+//
+//	"What did the store believe about X before record R was asserted?"
+//	"Which beliefs could not have existed without record R?"
+//	"What was the earliest time at which belief B was supportable?"
 type TemporalGraph struct {
 	mu sync.RWMutex
 	// events is the ordered list of assertion events, chronologically.
@@ -31,8 +32,8 @@ type TemporalGraph struct {
 
 // TemporalEvent records when a node was asserted and what it enabled.
 type TemporalEvent struct {
-	NodeID    string
-	Kind      string // "record" or "belief"
+	NodeID     string
+	Kind       string // "record" or "belief"
 	AssertedAt time.Time
 	// EnabledBy is the set of source IDs whose prior assertion was required
 	// for this node to be assertable (i.e., its derivation sources).
@@ -50,10 +51,10 @@ func (g *TemporalGraph) Record(nodeID, kind string, assertedAt time.Time, enable
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	ev := &TemporalEvent{
-		NodeID:    nodeID,
-		Kind:      kind,
+		NodeID:     nodeID,
+		Kind:       kind,
 		AssertedAt: assertedAt,
-		EnabledBy: append([]string{}, enabledBy...),
+		EnabledBy:  append([]string{}, enabledBy...),
 	}
 	// Insert in chronological order. The slice holds *TemporalEvent so byID
 	// pointers remain valid regardless of append reallocation or element shifting.
@@ -172,6 +173,7 @@ func (g *TemporalGraph) Timeline() []TemporalEvent {
 	result := make([]TemporalEvent, len(g.events))
 	for i, ev := range g.events {
 		result[i] = *ev
+		result[i].EnabledBy = append([]string(nil), ev.EnabledBy...)
 	}
 	return result
 }

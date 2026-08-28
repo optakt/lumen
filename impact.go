@@ -51,21 +51,29 @@ func (s *Store) ImpactScan(sourceID string, now time.Time) ([]ImpactEntry, error
 	}
 	beliefs := make(map[string]*beliefSnap)
 	for id, b := range s.beliefs {
-		if b.State != BeliefActive { continue }
+		if b.State != BeliefActive {
+			continue
+		}
 		frame := s.frames[b.Frame]
 		conf := b.CurrentConfidence(frame, now)
 		var srcAll, srcWithout []sourceConf
 		for _, dep := range b.Derivation {
 			if rec, ok := s.records[dep]; ok {
 				c := 1.0
-				if rec.Retracted { c = 0 }
+				if rec.Retracted {
+					c = 0
+				}
 				srcAll = append(srcAll, sourceConf{dep, "record", c})
-				if dep != sourceID { srcWithout = append(srcWithout, sourceConf{dep, "record", c}) }
+				if dep != sourceID {
+					srcWithout = append(srcWithout, sourceConf{dep, "record", c})
+				}
 			} else if src, ok := s.beliefs[dep]; ok {
 				srcFrame := s.frames[src.Frame]
 				srcConf := src.CurrentConfidence(srcFrame, now)
 				srcAll = append(srcAll, sourceConf{dep, "belief", srcConf})
-				if dep != sourceID { srcWithout = append(srcWithout, sourceConf{dep, "belief", srcConf}) }
+				if dep != sourceID {
+					srcWithout = append(srcWithout, sourceConf{dep, "belief", srcConf})
+				}
 			}
 		}
 		beliefs[id] = &beliefSnap{
@@ -79,43 +87,69 @@ func (s *Store) ImpactScan(sourceID string, now time.Time) ([]ImpactEntry, error
 	}
 	s.mu.RUnlock()
 
-	// BFS from sourceID through derivation graph using snapshot only.
-	// Queue carries: id of the affected node, hop count, and the estimated
-	// confidence of that node after the cascade reaches it.
-	type reach struct{ hop int; conf float64 }
-	affected := make(map[string]*reach)
-	// Initial entry: sourceID itself at confidence 0 (it's retracted).
-	type bfsEntry struct{ id string; hop int; estimatedConf float64 }
-	queue := []bfsEntry{{sourceID, 0, 0}}
-	visited := map[string]bool{sourceID: true}
-
-	for len(queue) > 0 {
-		cur := queue[0]
-		queue = queue[1:]
-		for id, b := range beliefs {
-			if visited[id] { continue }
-			links := false
-			for _, dep := range b.derivation {
-				if dep == cur.id { links = true; break }
-			}
-			if !links { continue }
-
-			// Estimate confidence: replace cur.id in sourcesAll with the estimated
-			// post-cascade confidence, then scale via noisy-or.
-			adj := make([]sourceConf, 0, len(b.sourcesAll))
-			for _, sc := range b.sourcesAll {
-				if sc.id == cur.id {
-					adj = append(adj, sourceConf{sc.id, sc.kind, cur.estimatedConf})
-				} else {
-					adj = append(adj, sc)
-				}
-			}
-			estimatedConf := norScale(adj, b.sourcesAll, b.conf)
-			if estimatedConf < 0 { estimatedConf = 0 }
-			affected[id] = &reach{hop: cur.hop + 1, conf: estimatedConf}
-			queue = append(queue, bfsEntry{id, cur.hop + 1, estimatedConf})
-			visited[id] = true
+	// Build a reverse derivation index and find the shortest distance from the
+	// retracted source to every affected belief.
+	dependents := make(map[string][]string)
+	for id, belief := range beliefs {
+		for _, source := range belief.derivation {
+			dependents[source] = append(dependents[source], id)
 		}
+	}
+	distance := map[string]int{sourceID: 0}
+	queue := []string{sourceID}
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		for _, dependent := range dependents[current] {
+			if _, seen := distance[dependent]; seen {
+				continue
+			}
+			distance[dependent] = distance[current] + 1
+			queue = append(queue, dependent)
+		}
+	}
+
+	// Recursively estimate each affected belief. Memoization ensures a diamond
+	// combines every changed parent before estimating the common descendant,
+	// rather than freezing the result from whichever branch the BFS saw first.
+	estimated := map[string]float64{sourceID: 0}
+	visiting := make(map[string]bool)
+	var estimate func(string) float64
+	estimate = func(id string) float64 {
+		if confidence, ok := estimated[id]; ok {
+			return confidence
+		}
+		belief, ok := beliefs[id]
+		if !ok || visiting[id] {
+			return 0
+		}
+		visiting[id] = true
+		adjusted := make([]sourceConf, 0, len(belief.sourcesAll))
+		for _, source := range belief.sourcesAll {
+			if _, affected := distance[source.id]; affected {
+				source.conf = estimate(source.id)
+			}
+			adjusted = append(adjusted, source)
+		}
+		confidence := norScale(adjusted, belief.sourcesAll, belief.conf)
+		if confidence < 0 {
+			confidence = 0
+		}
+		visiting[id] = false
+		estimated[id] = confidence
+		return confidence
+	}
+
+	type reach struct {
+		hop  int
+		conf float64
+	}
+	affected := make(map[string]*reach)
+	for id, hop := range distance {
+		if id == sourceID {
+			continue
+		}
+		affected[id] = &reach{hop: hop, conf: estimate(id)}
 	}
 
 	if len(affected) == 0 {
@@ -147,12 +181,20 @@ func (s *Store) ImpactScan(sourceID string, now time.Time) ([]ImpactEntry, error
 // norScale estimates confidence as noisy-or(without) / noisy-or(all) * current.
 // Returns 0 if the denominator is near zero.
 func norScale(without, all []sourceConf, current float64) float64 {
-	if len(without) == 0 { return 0 }
+	if len(without) == 0 {
+		return 0
+	}
 	pAll := 1.0
-	for _, s := range all { pAll *= (1.0 - s.conf) }
+	for _, s := range all {
+		pAll *= (1.0 - s.conf)
+	}
 	pWithout := 1.0
-	for _, s := range without { pWithout *= (1.0 - s.conf) }
+	for _, s := range without {
+		pWithout *= (1.0 - s.conf)
+	}
 	fullNOR := 1.0 - pAll
-	if fullNOR < 1e-9 { return 0 }
+	if fullNOR < 1e-9 {
+		return 0
+	}
 	return (1.0 - pWithout) / fullNOR * current
 }

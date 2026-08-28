@@ -100,7 +100,7 @@ func MostConservativeDecay(policies []DecayPolicy, elapsed time.Duration) float6
 type CrossFrameSource struct {
 	SourceBeliefID     string
 	SourceFrame        string
-	ConfidenceAtImport float64   // confidence of the source at assertion time
+	ConfidenceAtImport float64 // confidence of the source at assertion time
 	ImportedAt         time.Time
 }
 
@@ -118,34 +118,34 @@ type Record struct {
 	// Foundational marks the chain terminus — the epistemological bedrock
 	// this system stands on but cannot examine without dissolving itself.
 	// Foundational records are not "weak links"; they are axioms.
-	Foundational  bool
+	Foundational bool
 }
 
 // BeliefState tracks the epistemic status of a belief.
 type BeliefState int
 
 const (
-	BeliefActive  BeliefState = iota
-	BeliefSuspect             // depends on retracted ancestor; pending re-evaluation
-	BeliefStale               // decay exceeded threshold
-	BeliefSuperseded          // retired by a merge or explicit supersession; terminal
+	BeliefActive     BeliefState = iota
+	BeliefSuspect                // depends on retracted ancestor; pending re-evaluation
+	BeliefStale                  // decay exceeded threshold
+	BeliefSuperseded             // retired by a merge or explicit supersession; terminal
 )
 
 // Belief is a living inference about current or general state.
 // It decays over time and is derived from records and other beliefs.
 type Belief struct {
-	ID           string
-	Content      string
-	Confidence   float64     // confidence at AssertedAt
-	AssertedAt   time.Time
-	Frame        string
-	State        BeliefState
-	Provenance   Provenance
-	Derivation    []string    // IDs of source records/beliefs
-	ContractedBy  string     // if state is BeliefSuperseded, the record ID that triggered contraction
-	ImportedDecay []DecayPolicy       // decay policies carried in from foreign frames (legacy)
-	DecayOverride *DecayPolicy        // per-belief override; nil means use frame default
-	CrossFrame    []CrossFrameSource  // snapshots of cross-frame sources at assertion time
+	ID            string
+	Content       string
+	Confidence    float64 // confidence at AssertedAt
+	AssertedAt    time.Time
+	Frame         string
+	State         BeliefState
+	Provenance    Provenance
+	Derivation    []string           // IDs of source records/beliefs
+	ContractedBy  string             // if state is BeliefSuperseded, the record ID that triggered contraction
+	ImportedDecay []DecayPolicy      // decay policies carried in from foreign frames (legacy)
+	DecayOverride *DecayPolicy       // per-belief override; nil means use frame default
+	CrossFrame    []CrossFrameSource // snapshots of cross-frame sources at assertion time
 
 	// Bayesian composition metadata — present when BelieveComposed was used.
 	// Enables sensitivity analysis in FragilityScan and survives BoltDB round-trips.
@@ -159,6 +159,9 @@ func (b *Belief) CurrentConfidence(frame Frame, now time.Time) float64 {
 	// Suspect means "pending re-evaluation" (a source was retracted/revised),
 	// not "this claim is false." Consumers check b.State to act on suspicion.
 	elapsed := now.Sub(b.AssertedAt)
+	if elapsed < 0 {
+		elapsed = 0
+	}
 
 	// Determine which decay policy applies to this belief's own decay
 	ownPolicy := frame.Decay
@@ -192,9 +195,11 @@ func (b *Belief) CurrentConfidence(frame Frame, now time.Time) float64 {
 		}
 	}
 
-	if own < 0 {
+	if math.IsNaN(own) || own < 0 {
 		return 0
+	}
+	if own > 1 {
+		return 1
 	}
 	return own
 }
-

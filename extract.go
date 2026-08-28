@@ -2,7 +2,6 @@ package lumen
 
 import (
 	"fmt"
-	"math"
 	"regexp"
 	"strings"
 	"unicode"
@@ -25,20 +24,20 @@ type TextAnalysis struct {
 
 // ExtractedRecord is a record candidate extracted from free text.
 type ExtractedRecord struct {
-	ID        string
-	Content   string
+	ID         string
+	Content    string
 	Confidence float64 // 1.0 for factual claims, lower for hedged ones
-	Evidence  string  // the sentence or phrase it came from
+	Evidence   string  // the sentence or phrase it came from
 }
 
 // ExtractedBelief is a belief candidate extracted from free text.
 type ExtractedBelief struct {
-	ID         string
-	Content    string
-	Confidence float64
-	Frame      string
+	ID          string
+	Content     string
+	Confidence  float64
+	Frame       string
 	DerivedFrom []string // IDs of records it seems to derive from
-	Evidence   string
+	Evidence    string
 }
 
 // hedgePatterns are phrases that reduce confidence in a claim.
@@ -55,19 +54,6 @@ var strongPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)\b(in \d{4}|published in|journal|paper|study)\b`),
 }
 
-// positionPatterns indicate beliefs/positions rather than empirical records.
-var positionPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`(?i)\b(therefore|thus|hence|consequently|it follows that|this (suggests?|implies?|means?|indicates?))\b`),
-	regexp.MustCompile(`(?i)\b(I (believe|argue|think|hold|maintain)|we (believe|argue|maintain))\b`),
-	regexp.MustCompile(`(?i)\b(the best explanation|most plausible|most likely|the evidence (supports?|suggests?))\b`),
-	regexp.MustCompile(`(?i)\b(in conclusion|overall|taken together|on balance)\b`),
-}
-
-// negationPatterns detect negated claims.
-var negationPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`(?i)\b(not|no|never|neither|nor|cannot|can't|doesn't|isn't|aren't|wasn't|weren't|fails? to|does not|did not)\b`),
-}
-
 // AnalyzeText extracts belief candidates from a natural language text.
 // The text is split into sentences; each sentence is classified as a
 // record candidate, belief candidate, or neither.
@@ -82,7 +68,7 @@ func AnalyzeText(text string) *TextAnalysis {
 	analysis.Entities = entitySet
 
 	recordIdx := 0
-	beliefIdx  := 0
+	beliefIdx := 0
 	var recentRecordIDs []string
 
 	for _, sent := range sentences {
@@ -99,13 +85,21 @@ func AnalyzeText(text string) *TextAnalysis {
 		// Apply hedge/strength modifiers on top of base confidence
 		conf := cls.BaseConfidence
 		for _, p := range hedgePatterns {
-			if p.MatchString(sent) { conf -= 0.10 }
+			if p.MatchString(sent) {
+				conf -= 0.10
+			}
 		}
 		for _, p := range strongPatterns {
-			if p.MatchString(sent) { conf += 0.05 }
+			if p.MatchString(sent) {
+				conf += 0.05
+			}
 		}
-		if conf < 0.10 { conf = 0.10 }
-		if conf > 0.95 { conf = 0.95 }
+		if conf < 0.10 {
+			conf = 0.10
+		}
+		if conf > 0.95 {
+			conf = 0.95
+		}
 
 		// Use the classifier's frame suggestion if it's more specific than default
 		frame := analysis.Frame
@@ -197,73 +191,27 @@ func splitSentences(text string) []string {
 	return result
 }
 
-func isEmpiricalClaim(s string) bool {
-	for _, p := range strongPatterns {
-		if p.MatchString(s) {
-			return true
-		}
-	}
-	// Also catch year-anchored claims
-	yearRe := regexp.MustCompile(`\b(19|20)\d{2}\b`)
-	return yearRe.MatchString(s)
-}
-
-func isPositionClaim(s string) bool {
-	for _, p := range positionPatterns {
-		if p.MatchString(s) {
-			return true
-		}
-	}
-	return false
-}
-
-func baseConfidence(s string) float64 {
-	conf := 0.70 // default
-
-	// Hedges reduce confidence
-	hedgeCount := 0
-	for _, p := range hedgePatterns {
-		if p.MatchString(s) {
-			hedgeCount++
-		}
-	}
-	conf -= float64(hedgeCount) * 0.12
-
-	// Strong patterns increase confidence
-	strongCount := 0
-	for _, p := range strongPatterns {
-		if p.MatchString(s) {
-			strongCount++
-		}
-	}
-	conf += float64(strongCount) * 0.08
-
-	// Negation slightly reduces confidence (negated claims are less certain)
-	for _, p := range negationPatterns {
-		if p.MatchString(s) {
-			conf -= 0.05
-			break
-		}
-	}
-
-	return math.Max(0.1, math.Min(0.95, conf))
-}
-
 func suggestFrame(text string) string {
 	text = strings.ToLower(text)
 	empiricalSignals := []string{"study", "experiment", "found", "measured", "published", "journal", "data", "results", "p=", "n=", "sample"}
 	philosophySignals := []string{"consciousness", "qualia", "ontology", "epistemology", "metaphysics", "phenomenal", "intentionality"}
-	reasoningSignals  := []string{"therefore", "thus", "it follows", "conclusion", "argument", "premise", "logic"}
+	reasoningSignals := []string{"therefore", "thus", "it follows", "conclusion", "argument", "premise", "logic"}
 
 	empirical, philosophy, reasoning := 0, 0, 0
 	for _, sig := range empiricalSignals {
-		if strings.Contains(text, sig) { empirical++ }
+		if strings.Contains(text, sig) {
+			empirical++
+		}
 	}
 	for _, sig := range philosophySignals {
-		if strings.Contains(text, sig) { philosophy++ }
+		if strings.Contains(text, sig) {
+			philosophy++
+		}
 	}
 	for _, sig := range reasoningSignals {
-		if strings.Contains(text, sig) { reasoning++ }
+		if strings.Contains(text, sig) {
+			reasoning++
+		}
 	}
 
 	switch {
@@ -281,7 +229,7 @@ func suggestFrame(text string) string {
 func extractEntities(text string) []string {
 	// Reuse the SimpleNER approach from entity.go
 	words := strings.Fields(text)
-	seen  := make(map[string]bool)
+	seen := make(map[string]bool)
 	var entities []string
 
 	for i, w := range words {

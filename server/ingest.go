@@ -22,6 +22,8 @@ type ingestResponse struct {
 
 // handleIngest extracts belief candidates from raw text and asserts them into the store.
 func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
+	s.writeMu.Lock()
+	defer s.writeMu.Unlock()
 	var req ingestRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeErr(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
@@ -102,6 +104,9 @@ func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
 		resp.AssertedBeliefs = append(resp.AssertedBeliefs, id)
 	}
 
-	s.save()
+	if err := s.save(); err != nil {
+		writeErr(w, http.StatusInternalServerError, "persist store: "+err.Error())
+		return
+	}
 	writeJSON(w, http.StatusOK, resp)
 }

@@ -30,10 +30,10 @@ import (
 
 // Conflict represents a potential epistemic conflict between two beliefs.
 type Conflict struct {
-	BeliefA    string
-	BeliefB    string
-	Strength   float64 // 0.0 = weak signal, 1.0 = strong signal
-	Kind       string  // "negation", "divergence", "declared"
+	BeliefA     string
+	BeliefB     string
+	Strength    float64 // 0.0 = weak signal, 1.0 = strong signal
+	Kind        string  // "negation", "divergence", "declared"
 	Explanation string
 }
 
@@ -46,7 +46,7 @@ type Conflict struct {
 // which matters because BeliefHealth and StoreHealth both call it.
 func (s *Store) ConflictScan(now time.Time) []Conflict {
 	s.mu.RLock()
-	if !s.conflictDirty {
+	if !s.conflictDirty && s.conflictCacheAt.Equal(now) {
 		cached := make([]Conflict, len(s.conflictCache))
 		copy(cached, s.conflictCache)
 		s.mu.RUnlock()
@@ -59,6 +59,7 @@ func (s *Store) ConflictScan(now time.Time) []Conflict {
 	// again before we store the result; we accept that (the result is still
 	// correct for the snapshot we took).
 	s.mu.RLock()
+	generation := s.conflictGeneration
 	// Snapshot belief IDs and contents for analysis outside the lock
 	type snap struct {
 		id         string
@@ -68,7 +69,9 @@ func (s *Store) ConflictScan(now time.Time) []Conflict {
 	}
 	var beliefs []snap
 	for id, b := range s.beliefs {
-		if b.State == BeliefSuperseded { continue } // skip contracted beliefs
+		if b.State == BeliefSuperseded {
+			continue
+		} // skip contracted beliefs
 		frame := s.frames[b.Frame]
 		beliefs = append(beliefs, snap{
 			id:         id,
@@ -136,7 +139,9 @@ func (s *Store) ConflictScan(now time.Time) []Conflict {
 		for i := 0; i < len(bids); i++ {
 			for j := i + 1; j < len(bids); j++ {
 				a, b := bids[i], bids[j]
-				if a > b { a, b = b, a } // canonical order
+				if a > b {
+					a, b = b, a
+				} // canonical order
 				pairShared[pairKey{a, b}] = append(pairShared[pairKey{a, b}], entityID)
 			}
 		}
@@ -147,7 +152,9 @@ func (s *Store) ConflictScan(now time.Time) []Conflict {
 	alreadyCaught := make(pairSet)
 	for _, c := range conflicts {
 		a, b := c.BeliefA, c.BeliefB
-		if a > b { a, b = b, a }
+		if a > b {
+			a, b = b, a
+		}
 		alreadyCaught[pairKey{a, b}] = true
 	}
 
@@ -155,7 +162,9 @@ func (s *Store) ConflictScan(now time.Time) []Conflict {
 		// Recover snapped belief data via the index built above.
 		ai, aok := belief[pk[0]]
 		bi, bok := belief[pk[1]]
-		if !aok || !bok { continue }
+		if !aok || !bok {
+			continue
+		}
 		a, b := beliefs[ai], beliefs[bi]
 
 		aLower := strings.ToLower(a.content)
@@ -165,9 +174,13 @@ func (s *Store) ConflictScan(now time.Time) []Conflict {
 
 		if aNegates || bNegates {
 			strength := 0.6 + 0.2*float64(len(co))
-			if strength > 0.95 { strength = 0.95 }
+			if strength > 0.95 {
+				strength = 0.95
+			}
 			direction := a.id + " negates aspects of " + b.id
-			if bNegates { direction = b.id + " negates aspects of " + a.id }
+			if bNegates {
+				direction = b.id + " negates aspects of " + a.id
+			}
 			conflicts = append(conflicts, Conflict{
 				BeliefA: a.id, BeliefB: b.id, Strength: strength, Kind: "negation",
 				Explanation: fmt.Sprintf("%s. Shared entities: %s.", direction, strings.Join(co, ", ")),
@@ -198,11 +211,14 @@ func (s *Store) ConflictScan(now time.Time) []Conflict {
 
 	// Cache the result.
 	s.mu.Lock()
-	s.conflictCache = conflicts
-	s.conflictDirty = false
+	if s.conflictGeneration == generation {
+		s.conflictCache = append([]Conflict(nil), conflicts...)
+		s.conflictCacheAt = now
+		s.conflictDirty = false
+	}
 	s.mu.Unlock()
 
-	return conflicts
+	return append([]Conflict(nil), conflicts...)
 }
 
 // invalidateConflicts marks the conflict cache as dirty.
@@ -210,6 +226,7 @@ func (s *Store) ConflictScan(now time.Time) []Conflict {
 // records (confidence changes, additions, retractions, contractions).
 func (s *Store) invalidateConflicts() {
 	s.conflictDirty = true
+	s.conflictGeneration++
 }
 
 // containsNegationOf checks whether text A contains a negation marker
@@ -238,14 +255,16 @@ func containsNegationOf(a, b string, markers []string) bool {
 		// Check if a negation marker appears near a keyword from b
 		idx := strings.Index(a, marker)
 		for idx != -1 {
-			window := a[idx : minInt(idx+60, len(a))]
+			window := a[idx:minInt(idx+60, len(a))]
 			for _, kw := range keywords {
 				if strings.Contains(window, kw) {
 					return true
 				}
 			}
 			nextIdx := strings.Index(a[idx+1:], marker)
-			if nextIdx == -1 { break }
+			if nextIdx == -1 {
+				break
+			}
 			idx = idx + 1 + nextIdx
 		}
 	}
@@ -253,7 +272,9 @@ func containsNegationOf(a, b string, markers []string) bool {
 }
 
 func minInt(a, b int) int {
-	if a < b { return a }
+	if a < b {
+		return a
+	}
 	return b
 }
 
@@ -287,5 +308,3 @@ func (eg *EntityGraph) CoMentionedBetween(nodeA, nodeB string) []string {
 	sort.Strings(shared)
 	return shared
 }
-
-

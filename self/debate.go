@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
 )
 
 // DebatePosition represents one side in a philosophical debate.
@@ -89,6 +88,8 @@ func (d *Debate) RunRound(moves []DebateMove) error {
 
 // CorrelationSummary returns a summary of evidence correlation within each position's claims.
 func (d *Debate) CorrelationSummary() string {
+	d.model.mu.Lock()
+	defer d.model.mu.Unlock()
 	var sb strings.Builder
 	for _, pos := range d.Positions {
 		posName := pos.Name
@@ -98,7 +99,11 @@ func (d *Debate) CorrelationSummary() string {
 			if dp.Name == posName {
 				words := strings.Fields(strings.ToLower(posName))
 				if len(words) > 0 {
-					prefix = words[0][:2] + "-"
+					word := words[0]
+					if len(word) > 2 {
+						word = word[:2]
+					}
+					prefix = word + "-"
 				} else {
 					prefix = fmt.Sprintf("p%d-", i)
 				}
@@ -116,7 +121,7 @@ func (d *Debate) CorrelationSummary() string {
 			sb.WriteString("  (insufficient claims for correlation analysis)\n")
 			continue
 		}
-		sb.WriteString(fmt.Sprintf("  Evidence IDs: "))
+		sb.WriteString("  Evidence IDs: ")
 		for i, c := range claims {
 			if i > 0 {
 				sb.WriteString(", ")
@@ -148,7 +153,9 @@ func (d *Debate) FinalReport(now time.Time) string {
 	sb.WriteString(d.model.FrameReport(now))
 	sb.WriteString(d.CorrelationSummary())
 
-	corrections := d.model.corrections
-	sb.WriteString(fmt.Sprintf("\nCorrections made during debate: %d\n", len(corrections)))
+	d.model.mu.Lock()
+	correctionCount := len(d.model.corrections)
+	d.model.mu.Unlock()
+	sb.WriteString(fmt.Sprintf("\nCorrections made during debate: %d\n", correctionCount))
 	return sb.String()
 }

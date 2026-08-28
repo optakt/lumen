@@ -62,6 +62,12 @@ func normalize(s string) string {
 // RegisterEntity adds an entity to the graph. If the canonical ID already exists,
 // new aliases are merged in. Returns the canonical ID.
 func (g *EntityGraph) RegisterEntity(e *Entity) string {
+	if e == nil {
+		return ""
+	}
+	copyEntity := *e
+	copyEntity.Aliases = append([]string(nil), e.Aliases...)
+	e = &copyEntity
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	canon := normalize(e.ID)
@@ -311,12 +317,19 @@ func (g *EntityGraph) EntityStats() (entities, mentions int) {
 	return len(g.entities), len(g.mentions)
 }
 
-
 // Remove removes all entity mentions for a given content node ID.
 // Used by ApplyContraction to prevent entity queries returning dead IDs.
 func (g *EntityGraph) Remove(nodeID string) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	entities := g.nodeToEntities[nodeID]
+	delete(g.nodeToEntities, nodeID)
+	for entityID := range entities {
+		delete(g.entityToNodes[entityID], nodeID)
+		if len(g.entityToNodes[entityID]) == 0 {
+			delete(g.entityToNodes, entityID)
+		}
+	}
 	// Remove all mention edges from this node.
 	newMentions := g.mentions[:0]
 	for _, m := range g.mentions {
@@ -325,17 +338,66 @@ func (g *EntityGraph) Remove(nodeID string) {
 		}
 	}
 	g.mentions = newMentions
-	// Remove any entities that are now completely unreferenced.
-	for entityID := range g.entities {
-		referenced := false
-		for _, m := range g.mentions {
-			if m.EntityID == entityID {
-				referenced = true
-				break
-			}
-		}
-		if !referenced {
-			delete(g.entities, entityID)
-		}
+	// Entity registrations and aliases are configuration, not mention data.
+	// Keep them even when the last mentioning node is removed so later content
+	// can still be indexed against the same canonical entity.
+}
+
+// CloneFiltered returns an independent entity graph containing all registered
+// entities and aliases, but only mentions belonging to nodes in the filter.
+func (g *EntityGraph) CloneFiltered(nodes map[string]bool) *EntityGraph {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	clone := NewEntityGraph()
+	for id, entity := range g.entities {
+		copyEntity := *entity
+		copyEntity.Aliases = append([]string(nil), entity.Aliases...)
+		clone.entities[id] = &copyEntity
 	}
+	for alias, canon := range g.aliases {
+		clone.aliases[alias] = canon
+	}
+	for _, mention := range g.mentions {
+		if !nodes[mention.NodeID] {
+			continue
+		}
+		clone.mentions = append(clone.mentions, mention)
+		if clone.nodeToEntities[mention.NodeID] == nil {
+			clone.nodeToEntities[mention.NodeID] = make(map[string]bool)
+		}
+		clone.nodeToEntities[mention.NodeID][mention.EntityID] = true
+		if clone.entityToNodes[mention.EntityID] == nil {
+			clone.entityToNodes[mention.EntityID] = make(map[string]bool)
+		}
+		clone.entityToNodes[mention.EntityID][mention.NodeID] = true
+	}
+	return clone
+}
+
+type entityGraphState struct {
+	Entities []*Entity
+	Mentions []MentionEdge
+}
+
+func (g *EntityGraph) snapshot() entityGraphState {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	state := entityGraphState{Mentions: append([]MentionEdge(nil), g.mentions...)}
+	for _, entity := range g.entities {
+		copyEntity := *entity
+		copyEntity.Aliases = append([]string(nil), entity.Aliases...)
+		state.Entities = append(state.Entities, &copyEntity)
+	}
+	return state
+}
+
+func entityGraphFromState(state entityGraphState) *EntityGraph {
+	graph := NewEntityGraph()
+	for _, entity := range state.Entities {
+		graph.RegisterEntity(entity)
+	}
+	for _, mention := range state.Mentions {
+		_, _ = graph.AddMention(mention.NodeID, mention.EntityID, mention.Span)
+	}
+	return graph
 }

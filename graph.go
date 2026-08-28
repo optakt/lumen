@@ -92,7 +92,12 @@ func (g *BeliefGraph) EdgesTo(id string) []Edge {
 
 // DerivationSources returns the IDs of all nodes A derives from.
 func (g *BeliefGraph) DerivationSources(id string) []string {
-		return g.nodesOfKind(id, EdgeDerives, true)
+	return g.nodesOfKind(id, EdgeDerives, false)
+}
+
+// DerivationDependents returns beliefs directly derived from id.
+func (g *BeliefGraph) DerivationDependents(id string) []string {
+	return g.nodesOfKind(id, EdgeDerives, true)
 }
 
 // SemanticNeighbors returns all nodes that share a semantic (non-inferential) edge with id.
@@ -228,4 +233,25 @@ func (g *BeliefGraph) RemoveNode(id string) {
 		g.outbound[e.From] = append(g.outbound[e.From], i)
 		g.inbound[e.To] = append(g.inbound[e.To], i)
 	}
+}
+
+// CloneFiltered returns an independent graph containing only edges whose two
+// endpoints are present in nodes.
+func (g *BeliefGraph) CloneFiltered(nodes map[string]bool) *BeliefGraph {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	clone := NewBeliefGraph()
+	for _, edge := range g.edges {
+		if nodes[edge.From] && nodes[edge.To] {
+			clone.AddEdge(edge)
+		}
+	}
+	return clone
+}
+
+// AllEdges returns a defensive copy of every graph edge.
+func (g *BeliefGraph) AllEdges() []Edge {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return append([]Edge(nil), g.edges...)
 }

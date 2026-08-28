@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	lumen "github.com/optakt/lumen"
 )
+
+var sentinelSequence atomic.Uint64
 
 // ClaimKind identifies what kind of epistemic act produced a belief.
 type ClaimKind string
@@ -28,22 +31,22 @@ const (
 type Claim struct {
 	ID         string
 	Kind       ClaimKind
-	Content    string    // what is being claimed
-	Frame      string    // which epistemic frame
+	Content    string // what is being claimed
+	Frame      string // which epistemic frame
 	Confidence float64
 	AssertedAt time.Time
-	Derivation []string  // IDs of beliefs/records this follows from
-	Replaces   string    // ID of a prior belief this corrects (if ClaimCorrected)
-	Tags       []string  // topic tags for later retrieval
+	Derivation []string // IDs of beliefs/records this follows from
+	Replaces   string   // ID of a prior belief this corrects (if ClaimCorrected)
+	Tags       []string // topic tags for later retrieval
 }
 
 // SelfModel is the agent's live epistemic state — a Lumen belief store
 // representing what the agent believes, how it knows it, and how confident it is.
 type SelfModel struct {
-	mu         sync.Mutex         // guards claims and corrections; store locks itself
-	store      *lumen.Store
-	claims     map[string]*Claim  // claim ID -> Claim
-	corrections []Correction      // history of corrections
+	mu           sync.Mutex // guards claims and corrections; store locks itself
+	store        *lumen.Store
+	claims       map[string]*Claim // claim ID -> Claim
+	corrections  []Correction      // history of corrections
 	sessionStart time.Time
 }
 
@@ -71,13 +74,43 @@ func NewSelfModel() *SelfModel {
 // asserted first and the prior retracted only after success — the reverse
 // order loses the old claim without gaining the new one if assertion fails.
 func (m *SelfModel) Assert(c *Claim) error {
+	if c == nil {
+		return fmt.Errorf("claim must not be nil")
+	}
+	copyClaim := *c
+	copyClaim.Derivation = append([]string(nil), c.Derivation...)
+	copyClaim.Tags = append([]string(nil), c.Tags...)
+	c = &copyClaim
 	if c.AssertedAt.IsZero() {
 		c.AssertedAt = time.Now()
+	}
+	if c.ID == "" {
+		return fmt.Errorf("claim ID must not be empty")
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, exists := m.claims[c.ID]; exists {
+		return fmt.Errorf("claim %s already exists", c.ID)
+	}
+	if c.Replaces != "" {
+		if _, exists := m.claims[c.Replaces]; !exists {
+			return fmt.Errorf("claim %s to replace not found", c.Replaces)
+		}
+		if _, err := m.sentinelForClaim(c.Replaces); err != nil {
+			return err
+		}
+	}
+	if err := m.store.ValidateBeliefCandidate(&lumen.Belief{
+		ID: c.ID, Content: c.Content, Confidence: c.Confidence,
+		AssertedAt: c.AssertedAt, Frame: c.Frame, Derivation: c.Derivation,
+	}); err != nil {
+		return fmt.Errorf("believe: %w", err)
 	}
 
 	// Create a validity sentinel record for this claim.
 	// Retracting the sentinel will mark the belief as suspect.
-	sentinelID := "sentinel:" + c.ID
+	sentinelID := fmt.Sprintf("sentinel:%s-%d", c.ID, sentinelSequence.Add(1))
 	if err := m.store.Assert(&lumen.Record{
 		ID:        sentinelID,
 		Content:   "validity sentinel for " + c.ID,
@@ -104,30 +137,46 @@ func (m *SelfModel) Assert(c *Claim) error {
 
 	// The new claim is in place — now retract the one it corrects.
 	if c.Replaces != "" {
-		if err := m.Retract(c.Replaces, "corrected: superseded by "+c.ID); err != nil {
+		if err := m.retractLocked(c.Replaces, "corrected: superseded by "+c.ID, c.AssertedAt); err != nil {
 			return fmt.Errorf("new claim %s asserted, but retracting prior %s failed: %w", c.ID, c.Replaces, err)
 		}
-		m.mu.Lock()
 		m.corrections = append(m.corrections, Correction{
 			At: c.AssertedAt, RetractedID: c.Replaces,
 			Reason: "corrected", ReplacedBy: c.ID,
 		})
-		m.mu.Unlock()
 	}
 
-	m.mu.Lock()
 	m.claims[c.ID] = c
-	m.mu.Unlock()
 	return nil
 }
 
 // Retract marks a prior claim as invalid (e.g. corrected by new information).
 // It does NOT assert a replacement — use Assert with Replaces for that.
 func (m *SelfModel) Retract(claimID string, reason string) error {
-	// Each claim has a sentinel record created at assertion time.
-	// Retracting the sentinel propagates to the belief via Lumen's dependency graph.
-	sentinelID := "sentinel:" + claimID
-	return m.store.Retract(sentinelID, reason, time.Now())
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.retractLocked(claimID, reason, time.Now())
+}
+
+func (m *SelfModel) retractLocked(claimID, reason string, at time.Time) error {
+	sentinelID, err := m.sentinelForClaim(claimID)
+	if err != nil {
+		return err
+	}
+	return m.store.Retract(sentinelID, reason, at)
+}
+
+func (m *SelfModel) sentinelForClaim(claimID string) (string, error) {
+	for _, sourceID := range m.store.Graph.DerivationSources(claimID) {
+		if strings.HasPrefix(sourceID, "sentinel:") {
+			return sourceID, nil
+		}
+	}
+	legacy := "sentinel:" + claimID
+	if m.store.HasRecord(legacy) {
+		return legacy, nil
+	}
+	return "", fmt.Errorf("validity sentinel for claim %s not found", claimID)
 }
 
 // Status returns the current confidence of a claim, with decay applied.
