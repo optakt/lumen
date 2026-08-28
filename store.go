@@ -460,6 +460,17 @@ func (s *Store) HasRecord(id string) bool {
 	return exists
 }
 
+// AllRecords returns all records in the store.
+func (s *Store) AllRecords() []*Record {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]*Record, 0, len(s.records))
+	for _, r := range s.records {
+		result = append(result, cloneRecord(r))
+	}
+	return result
+}
+
 // Frame returns a frame definition by name.
 func (s *Store) Frame(name string) (Frame, bool) {
 	s.mu.RLock()

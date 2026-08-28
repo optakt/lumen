@@ -83,15 +83,12 @@ func main() {
 	if err := lumen.LoadFile(string(probeBytes), store, time.Now()); err != nil {
 		log.Fatalf("parse probes: %v", err)
 	}
-	// Probes are stored as records in the .lm file. Extract them via search —
-	// all records contain "Probe:" in their content.
-	idx := store.BuildSearchIndex()
-	results := store.Search(idx, "Probe", 100)
+	// Probes are stored as records in the .lm file.
 	var probeIDs []string
 	var probeTexts []string
-	for _, r := range results {
-		if r.Kind == "record" && strings.Contains(r.Content, "Probe:") {
-			probeIDs = append(probeIDs, r.NodeID)
+	for _, r := range store.AllRecords() {
+		if strings.Contains(r.Content, "Probe:") {
+			probeIDs = append(probeIDs, r.ID)
 			probeTexts = append(probeTexts, r.Content)
 		}
 	}
@@ -113,7 +110,7 @@ func main() {
 	log.Printf("loaded %d providers", len(providers))
 
 	// Open output.
-	outFile, err := os.Create(*outPath)
+	outFile, err := os.OpenFile(*outPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatalf("create output: %v", err)
 	}
@@ -195,15 +192,18 @@ func callModel(p Provider, apiKey, probe string) (string, error) {
 
 	switch p.Plugin {
 	case "completions":
-		url = strings.TrimSuffix(p.URL, "/") + "/v1/chat/completions"
+		base := strings.TrimSuffix(p.URL, "/")
+		if !strings.HasSuffix(base, "/v1") && !strings.Contains(base, "/v1/") && !strings.Contains(base, "/v1beta/") {
+			base += "/v1"
+		}
+		url = base + "/chat/completions"
 		payload := map[string]any{
 			"model": p.Model,
 			"messages": []map[string]string{
 				{"role": "system", "content": systemPrompt},
 				{"role": "user", "content": probe},
 			},
-			"max_tokens":  500,
-			"temperature": 0,
+			"max_completion_tokens": 16000,
 		}
 		body, err = json.Marshal(payload)
 	case "messages":
@@ -211,7 +211,7 @@ func callModel(p Provider, apiKey, probe string) (string, error) {
 		payload := map[string]any{
 			"model":      p.Model,
 			"system":     systemPrompt,
-			"max_tokens": 500,
+			"max_tokens": 16000,
 			"messages": []map[string]string{
 				{"role": "user", "content": probe},
 			},
@@ -271,7 +271,27 @@ func callModel(p Provider, apiKey, probe string) (string, error) {
 		if len(content) == 0 {
 			return "", fmt.Errorf("no content in response")
 		}
+		// Find the first text block — some providers return thinking blocks first.
+		for _, block := range content {
+			bm, _ := block.(map[string]any)
+			if bm["type"] == "text" {
+				text, _ := bm["text"].(string)
+				return text, nil
+			}
+		}
+		// Fallback: take whatever text is in the first block.
 		text, _ := content[0].(map[string]any)["text"].(string)
+		if text == "" {
+			return "", fmt.Errorf("no text content in response (got types: %v)", func() []string {
+				var types []string
+				for _, block := range content {
+					bm, _ := block.(map[string]any)
+					t, _ := bm["type"].(string)
+					types = append(types, t)
+				}
+				return types
+			}())
+		}
 		return text, nil
 	}
 	return "", fmt.Errorf("unknown plugin")

@@ -1,0 +1,811 @@
+2026/08/28 14:06:09 probe hash: 8fa68ca01acb8f4654d2e7eefc652799a4f5f2b686af5544bdf1e62b937b9632
+2026/08/28 14:06:09 loaded 14 probes
+2026/08/28 14:06:09 loaded 10 providers
+2026/08/28 14:06:09 [claude-opus-4-6 run=1] p14-prompt
+2026/08/28 14:06:20 [claude-opus-4-6 run=1] p12-prompt
+2026/08/28 14:06:30 [claude-opus-4-6 run=1] p5-prompt
+2026/08/28 14:06:38 [claude-opus-4-6 run=1] p6-prompt
+2026/08/28 14:06:46 [claude-opus-4-6 run=1] p1-prompt
+2026/08/28 14:06:56 [claude-opus-4-6 run=1] p9-prompt
+2026/08/28 14:07:05 [claude-opus-4-6 run=1] p7-prompt
+2026/08/28 14:07:14 [claude-opus-4-6 run=1] p10-prompt
+2026/08/28 14:07:22 [claude-opus-4-6 run=1] p3-prompt
+2026/08/28 14:07:30 [claude-opus-4-6 run=1] p8-prompt
+2026/08/28 14:07:41 [claude-opus-4-6 run=1] p15-prompt
+2026/08/28 14:07:49 [claude-opus-4-6 run=1] p2-prompt
+2026/08/28 14:08:09 [claude-opus-4-6 run=1] p13-prompt
+2026/08/28 14:08:14 [claude-opus-4-6 run=1] p11-prompt
+2026/08/28 14:08:22 [claude-opus-4-6 run=2] p13-prompt
+2026/08/28 14:08:27 [claude-opus-4-6 run=2] p8-prompt
+2026/08/28 14:08:37 [claude-opus-4-6 run=2] p5-prompt
+2026/08/28 14:08:46 [claude-opus-4-6 run=2] p2-prompt
+2026/08/28 14:08:56 [claude-opus-4-6 run=2] p15-prompt
+2026/08/28 14:09:03 [claude-opus-4-6 run=2] p14-prompt
+2026/08/28 14:09:11 [claude-opus-4-6 run=2] p11-prompt
+2026/08/28 14:09:24 [claude-opus-4-6 run=2] p6-prompt
+2026/08/28 14:09:31 [claude-opus-4-6 run=2] p10-prompt
+2026/08/28 14:09:39 [claude-opus-4-6 run=2] p7-prompt
+2026/08/28 14:09:47 [claude-opus-4-6 run=2] p12-prompt
+2026/08/28 14:09:56 [claude-opus-4-6 run=2] p1-prompt
+2026/08/28 14:10:07 [claude-opus-4-6 run=2] p3-prompt
+2026/08/28 14:10:30 [claude-opus-4-6 run=2] p9-prompt
+2026/08/28 14:10:38 [claude-opus-4-6 run=3] p5-prompt
+2026/08/28 14:10:56 [claude-opus-4-6 run=3] p9-prompt
+2026/08/28 14:11:04 [claude-opus-4-6 run=3] p15-prompt
+2026/08/28 14:11:11 [claude-opus-4-6 run=3] p2-prompt
+2026/08/28 14:11:21 [claude-opus-4-6 run=3] p6-prompt
+2026/08/28 14:11:28 [claude-opus-4-6 run=3] p8-prompt
+2026/08/28 14:11:37 [claude-opus-4-6 run=3] p7-prompt
+2026/08/28 14:11:55 [claude-opus-4-6 run=3] p11-prompt
+2026/08/28 14:12:03 [claude-opus-4-6 run=3] p1-prompt
+2026/08/28 14:12:12 [claude-opus-4-6 run=3] p12-prompt
+2026/08/28 14:12:22 [claude-opus-4-6 run=3] p14-prompt
+2026/08/28 14:12:28 [claude-opus-4-6 run=3] p10-prompt
+2026/08/28 14:12:35 [claude-opus-4-6 run=3] p13-prompt
+2026/08/28 14:12:41 [claude-opus-4-6 run=3] p3-prompt
+2026/08/28 14:12:50 [claude-sonnet-4-6 run=1] p8-prompt
+2026/08/28 14:12:56 [claude-sonnet-4-6 run=1] p11-prompt
+2026/08/28 14:13:02 [claude-sonnet-4-6 run=1] p3-prompt
+2026/08/28 14:13:07 [claude-sonnet-4-6 run=1] p7-prompt
+2026/08/28 14:13:13 [claude-sonnet-4-6 run=1] p10-prompt
+2026/08/28 14:13:17 [claude-sonnet-4-6 run=1] p14-prompt
+2026/08/28 14:13:23 [claude-sonnet-4-6 run=1] p9-prompt
+2026/08/28 14:13:28 [claude-sonnet-4-6 run=1] p15-prompt
+2026/08/28 14:13:32 [claude-sonnet-4-6 run=1] p2-prompt
+2026/08/28 14:13:39 [claude-sonnet-4-6 run=1] p1-prompt
+2026/08/28 14:13:46 [claude-sonnet-4-6 run=1] p13-prompt
+2026/08/28 14:13:49 [claude-sonnet-4-6 run=1] p12-prompt
+2026/08/28 14:13:56 [claude-sonnet-4-6 run=1] p6-prompt
+2026/08/28 14:14:00 [claude-sonnet-4-6 run=1] p5-prompt
+2026/08/28 14:14:06 [claude-sonnet-4-6 run=2] p15-prompt
+2026/08/28 14:14:12 [claude-sonnet-4-6 run=2] p11-prompt
+2026/08/28 14:14:17 [claude-sonnet-4-6 run=2] p13-prompt
+2026/08/28 14:14:21 [claude-sonnet-4-6 run=2] p12-prompt
+2026/08/28 14:14:26 [claude-sonnet-4-6 run=2] p2-prompt
+2026/08/28 14:14:38 [claude-sonnet-4-6 run=2] p3-prompt
+2026/08/28 14:14:43 [claude-sonnet-4-6 run=2] p9-prompt
+2026/08/28 14:14:49 [claude-sonnet-4-6 run=2] p1-prompt
+2026/08/28 14:14:56 [claude-sonnet-4-6 run=2] p7-prompt
+2026/08/28 14:15:13 [claude-sonnet-4-6 run=2] p14-prompt
+2026/08/28 14:15:18 [claude-sonnet-4-6 run=2] p8-prompt
+2026/08/28 14:15:23 [claude-sonnet-4-6 run=2] p10-prompt
+2026/08/28 14:15:28 [claude-sonnet-4-6 run=2] p6-prompt
+2026/08/28 14:15:33 [claude-sonnet-4-6 run=2] p5-prompt
+2026/08/28 14:15:38 [claude-sonnet-4-6 run=3] p1-prompt
+2026/08/28 14:15:45 [claude-sonnet-4-6 run=3] p15-prompt
+2026/08/28 14:15:50 [claude-sonnet-4-6 run=3] p8-prompt
+2026/08/28 14:15:56 [claude-sonnet-4-6 run=3] p14-prompt
+2026/08/28 14:16:01 [claude-sonnet-4-6 run=3] p9-prompt
+2026/08/28 14:16:07 [claude-sonnet-4-6 run=3] p11-prompt
+2026/08/28 14:16:14 [claude-sonnet-4-6 run=3] p5-prompt
+2026/08/28 14:16:20 [claude-sonnet-4-6 run=3] p13-prompt
+2026/08/28 14:16:23 [claude-sonnet-4-6 run=3] p10-prompt
+2026/08/28 14:16:28 [claude-sonnet-4-6 run=3] p12-prompt
+2026/08/28 14:16:33 [claude-sonnet-4-6 run=3] p2-prompt
+2026/08/28 14:16:40 [claude-sonnet-4-6 run=3] p3-prompt
+2026/08/28 14:16:47 [claude-sonnet-4-6 run=3] p7-prompt
+2026/08/28 14:16:52 [claude-sonnet-4-6 run=3] p6-prompt
+2026/08/28 14:16:57 [fable-5 run=1] p8-prompt
+2026/08/28 14:17:05 [fable-5 run=1] p10-prompt
+2026/08/28 14:17:13 [fable-5 run=1] p1-prompt
+2026/08/28 14:17:22 [fable-5 run=1] p5-prompt
+2026/08/28 14:17:29 [fable-5 run=1] p6-prompt
+2026/08/28 14:17:37 [fable-5 run=1] p13-prompt
+2026/08/28 14:17:43 [fable-5 run=1] p12-prompt
+2026/08/28 14:17:52 [fable-5 run=1] p7-prompt
+2026/08/28 14:18:00 [fable-5 run=1] p11-prompt
+2026/08/28 14:18:09 [fable-5 run=1] p9-prompt
+2026/08/28 14:18:18 [fable-5 run=1] p15-prompt
+2026/08/28 14:18:25 [fable-5 run=1] p2-prompt
+2026/08/28 14:18:33 [fable-5 run=1] p14-prompt
+2026/08/28 14:18:41 [fable-5 run=1] p3-prompt
+2026/08/28 14:18:50 [fable-5 run=2] p10-prompt
+2026/08/28 14:18:57 [fable-5 run=2] p12-prompt
+2026/08/28 14:19:05 [fable-5 run=2] p9-prompt
+2026/08/28 14:19:14 [fable-5 run=2] p14-prompt
+2026/08/28 14:19:22 [fable-5 run=2] p7-prompt
+2026/08/28 14:19:30 [fable-5 run=2] p3-prompt
+2026/08/28 14:19:39 [fable-5 run=2] p15-prompt
+2026/08/28 14:19:46 [fable-5 run=2] p11-prompt
+2026/08/28 14:19:57 [fable-5 run=2] p2-prompt
+2026/08/28 14:20:05 [fable-5 run=2] p13-prompt
+2026/08/28 14:20:11 [fable-5 run=2] p5-prompt
+2026/08/28 14:20:18 [fable-5 run=2] p8-prompt
+2026/08/28 14:20:25 [fable-5 run=2] p6-prompt
+2026/08/28 14:20:34 [fable-5 run=2] p1-prompt
+2026/08/28 14:20:43 [fable-5 run=3] p5-prompt
+2026/08/28 14:20:50 [fable-5 run=3] p11-prompt
+2026/08/28 14:21:00 [fable-5 run=3] p1-prompt
+2026/08/28 14:21:09 [fable-5 run=3] p2-prompt
+2026/08/28 14:21:17 [fable-5 run=3] p6-prompt
+2026/08/28 14:21:25 [fable-5 run=3] p8-prompt
+2026/08/28 14:21:34 [fable-5 run=3] p15-prompt
+2026/08/28 14:21:42 [fable-5 run=3] p10-prompt
+2026/08/28 14:21:50 [fable-5 run=3] p14-prompt
+2026/08/28 14:21:57 [fable-5 run=3] p7-prompt
+2026/08/28 14:22:06 [fable-5 run=3] p3-prompt
+2026/08/28 14:22:14 [fable-5 run=3] p9-prompt
+2026/08/28 14:22:23 [fable-5 run=3] p13-prompt
+2026/08/28 14:22:29 [fable-5 run=3] p12-prompt
+2026/08/28 14:22:38 [gpt-5.6-sol run=1] p10-prompt
+2026/08/28 14:22:39   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:39 [gpt-5.6-sol run=1] p14-prompt
+2026/08/28 14:22:40   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:40 [gpt-5.6-sol run=1] p13-prompt
+2026/08/28 14:22:40   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:40 [gpt-5.6-sol run=1] p8-prompt
+2026/08/28 14:22:41   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:41 [gpt-5.6-sol run=1] p3-prompt
+2026/08/28 14:22:41   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:41 [gpt-5.6-sol run=1] p1-prompt
+2026/08/28 14:22:41   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:41 [gpt-5.6-sol run=1] p2-prompt
+2026/08/28 14:22:42   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:42 [gpt-5.6-sol run=1] p11-prompt
+2026/08/28 14:22:42   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:42 [gpt-5.6-sol run=1] p12-prompt
+2026/08/28 14:22:42   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:42 [gpt-5.6-sol run=1] p5-prompt
+2026/08/28 14:22:43   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:43 [gpt-5.6-sol run=1] p9-prompt
+2026/08/28 14:22:43   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:43 [gpt-5.6-sol run=1] p6-prompt
+2026/08/28 14:22:43   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:43 [gpt-5.6-sol run=1] p15-prompt
+2026/08/28 14:22:43   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:43 [gpt-5.6-sol run=1] p7-prompt
+2026/08/28 14:22:43   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:43 [gpt-5.6-sol run=2] p10-prompt
+2026/08/28 14:22:43   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:43 [gpt-5.6-sol run=2] p13-prompt
+2026/08/28 14:22:44   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:44 [gpt-5.6-sol run=2] p2-prompt
+2026/08/28 14:22:44   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:44 [gpt-5.6-sol run=2] p15-prompt
+2026/08/28 14:22:44   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:44 [gpt-5.6-sol run=2] p5-prompt
+2026/08/28 14:22:44   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:44 [gpt-5.6-sol run=2] p7-prompt
+2026/08/28 14:22:44   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:44 [gpt-5.6-sol run=2] p9-prompt
+2026/08/28 14:22:45   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:45 [gpt-5.6-sol run=2] p14-prompt
+2026/08/28 14:22:45   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:45 [gpt-5.6-sol run=2] p1-prompt
+2026/08/28 14:22:45   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:45 [gpt-5.6-sol run=2] p3-prompt
+2026/08/28 14:22:45   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:45 [gpt-5.6-sol run=2] p12-prompt
+2026/08/28 14:22:45   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:45 [gpt-5.6-sol run=2] p11-prompt
+2026/08/28 14:22:46   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:46 [gpt-5.6-sol run=2] p8-prompt
+2026/08/28 14:22:46   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:46 [gpt-5.6-sol run=2] p6-prompt
+2026/08/28 14:22:46   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:46 [gpt-5.6-sol run=3] p15-prompt
+2026/08/28 14:22:46   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:46 [gpt-5.6-sol run=3] p13-prompt
+2026/08/28 14:22:46   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:46 [gpt-5.6-sol run=3] p10-prompt
+2026/08/28 14:22:47   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:47 [gpt-5.6-sol run=3] p7-prompt
+2026/08/28 14:22:47   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:47 [gpt-5.6-sol run=3] p3-prompt
+2026/08/28 14:22:47   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:47 [gpt-5.6-sol run=3] p9-prompt
+2026/08/28 14:22:47   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:47 [gpt-5.6-sol run=3] p6-prompt
+2026/08/28 14:22:47   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:47 [gpt-5.6-sol run=3] p2-prompt
+2026/08/28 14:22:48   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:48 [gpt-5.6-sol run=3] p5-prompt
+2026/08/28 14:22:48   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:48 [gpt-5.6-sol run=3] p12-prompt
+2026/08/28 14:22:48   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:48 [gpt-5.6-sol run=3] p14-prompt
+2026/08/28 14:22:48   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:48 [gpt-5.6-sol run=3] p11-prompt
+2026/08/28 14:22:48   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:48 [gpt-5.6-sol run=3] p1-prompt
+2026/08/28 14:22:49   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:49 [gpt-5.6-sol run=3] p8-prompt
+2026/08/28 14:22:49   ERROR: HTTP 400: {
+  "error": {
+    "message": "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
+    "type": "invalid_request_error",
+    "param": "temperature",
+    "code": "unsupported_value"
+  }
+}
+2026/08/28 14:22:49 [grok-4.6 run=1] p14-prompt
+2026/08/28 14:23:17 [grok-4.6 run=1] p5-prompt
+2026/08/28 14:23:38 [grok-4.6 run=1] p8-prompt
+2026/08/28 14:24:04 [grok-4.6 run=1] p6-prompt
+2026/08/28 14:24:17 [grok-4.6 run=1] p1-prompt
+2026/08/28 14:24:45 [grok-4.6 run=1] p11-prompt
+2026/08/28 14:25:15 [grok-4.6 run=1] p12-prompt
+2026/08/28 14:25:42 [grok-4.6 run=1] p2-prompt
+2026/08/28 14:25:59 [grok-4.6 run=1] p15-prompt
+2026/08/28 14:26:20 [grok-4.6 run=1] p3-prompt
+2026/08/28 14:26:54 [grok-4.6 run=1] p7-prompt
+2026/08/28 14:27:19 [grok-4.6 run=1] p13-prompt
+2026/08/28 14:27:47 [grok-4.6 run=1] p10-prompt
+2026/08/28 14:28:01 [grok-4.6 run=1] p9-prompt
+2026/08/28 14:28:32 [grok-4.6 run=2] p7-prompt
+2026/08/28 14:28:53 [grok-4.6 run=2] p1-prompt
+2026/08/28 14:29:14 [grok-4.6 run=2] p6-prompt
+2026/08/28 14:29:30 [grok-4.6 run=2] p12-prompt
+2026/08/28 14:30:11 [grok-4.6 run=2] p14-prompt
+2026/08/28 14:30:45 [grok-4.6 run=2] p2-prompt
+2026/08/28 14:31:01 [grok-4.6 run=2] p5-prompt
+2026/08/28 14:31:20 [grok-4.6 run=2] p11-prompt
+2026/08/28 14:31:58 [grok-4.6 run=2] p8-prompt
+2026/08/28 14:32:33 [grok-4.6 run=2] p10-prompt
+2026/08/28 14:33:29 [grok-4.6 run=2] p3-prompt
+2026/08/28 14:33:48 [grok-4.6 run=2] p15-prompt
+2026/08/28 14:34:08 [grok-4.6 run=2] p13-prompt
+2026/08/28 14:34:32 [grok-4.6 run=2] p9-prompt
+2026/08/28 14:35:05 [grok-4.6 run=3] p1-prompt
+2026/08/28 14:35:33 [grok-4.6 run=3] p5-prompt
+2026/08/28 14:35:53 [grok-4.6 run=3] p13-prompt
+2026/08/28 14:36:24 [grok-4.6 run=3] p9-prompt
+2026/08/28 14:36:49 [grok-4.6 run=3] p3-prompt
+2026/08/28 14:37:13 [grok-4.6 run=3] p7-prompt
+2026/08/28 14:37:33 [grok-4.6 run=3] p11-prompt
+2026/08/28 14:37:54 [grok-4.6 run=3] p6-prompt
+2026/08/28 14:38:21 [grok-4.6 run=3] p2-prompt
+2026/08/28 14:38:40 [grok-4.6 run=3] p15-prompt
+2026/08/28 14:38:58 [grok-4.6 run=3] p12-prompt
+2026/08/28 14:39:26 [grok-4.6 run=3] p14-prompt
+2026/08/28 14:40:01 [grok-4.6 run=3] p8-prompt
+2026/08/28 14:40:26 [grok-4.6 run=3] p10-prompt
+2026/08/28 14:40:46 [deepseek-v4-pro run=1] p1-prompt
+2026/08/28 14:40:49 [deepseek-v4-pro run=1] p6-prompt
+2026/08/28 14:40:52 [deepseek-v4-pro run=1] p15-prompt
+2026/08/28 14:40:55 [deepseek-v4-pro run=1] p9-prompt
+2026/08/28 14:40:58 [deepseek-v4-pro run=1] p10-prompt
+2026/08/28 14:41:01 [deepseek-v4-pro run=1] p12-prompt
+2026/08/28 14:41:04 [deepseek-v4-pro run=1] p8-prompt
+2026/08/28 14:41:07 [deepseek-v4-pro run=1] p11-prompt
+2026/08/28 14:41:09 [deepseek-v4-pro run=1] p7-prompt
+2026/08/28 14:41:12 [deepseek-v4-pro run=1] p3-prompt
+2026/08/28 14:41:15 [deepseek-v4-pro run=1] p13-prompt
+2026/08/28 14:41:17 [deepseek-v4-pro run=1] p2-prompt
+2026/08/28 14:41:20 [deepseek-v4-pro run=1] p5-prompt
+2026/08/28 14:41:23 [deepseek-v4-pro run=1] p14-prompt
+2026/08/28 14:41:25 [deepseek-v4-pro run=2] p7-prompt
+2026/08/28 14:41:28 [deepseek-v4-pro run=2] p12-prompt
+2026/08/28 14:41:31 [deepseek-v4-pro run=2] p14-prompt
+2026/08/28 14:41:34 [deepseek-v4-pro run=2] p13-prompt
+2026/08/28 14:41:35 [deepseek-v4-pro run=2] p6-prompt
+2026/08/28 14:41:38 [deepseek-v4-pro run=2] p10-prompt
+2026/08/28 14:41:41 [deepseek-v4-pro run=2] p3-prompt
+2026/08/28 14:41:44 [deepseek-v4-pro run=2] p8-prompt
+2026/08/28 14:41:47 [deepseek-v4-pro run=2] p1-prompt
+2026/08/28 14:41:51 [deepseek-v4-pro run=2] p11-prompt
+2026/08/28 14:41:53 [deepseek-v4-pro run=2] p15-prompt
+2026/08/28 14:41:56 [deepseek-v4-pro run=2] p5-prompt
+2026/08/28 14:41:59 [deepseek-v4-pro run=2] p2-prompt
+2026/08/28 14:42:02 [deepseek-v4-pro run=2] p9-prompt
+2026/08/28 14:42:05 [deepseek-v4-pro run=3] p10-prompt
+2026/08/28 14:42:08 [deepseek-v4-pro run=3] p2-prompt
+2026/08/28 14:42:11 [deepseek-v4-pro run=3] p6-prompt
+2026/08/28 14:42:13 [deepseek-v4-pro run=3] p11-prompt
+2026/08/28 14:42:16 [deepseek-v4-pro run=3] p15-prompt
+2026/08/28 14:42:19 [deepseek-v4-pro run=3] p3-prompt
+2026/08/28 14:42:22 [deepseek-v4-pro run=3] p12-prompt
+2026/08/28 14:42:25 [deepseek-v4-pro run=3] p9-prompt
+2026/08/28 14:42:28 [deepseek-v4-pro run=3] p7-prompt
+2026/08/28 14:42:31 [deepseek-v4-pro run=3] p1-prompt
+2026/08/28 14:42:34 [deepseek-v4-pro run=3] p8-prompt
+2026/08/28 14:42:36 [deepseek-v4-pro run=3] p14-prompt
+2026/08/28 14:42:39 [deepseek-v4-pro run=3] p5-prompt
+2026/08/28 14:42:42 [deepseek-v4-pro run=3] p13-prompt
+2026/08/28 14:42:44 [kimi-k3 run=1] p14-prompt
+2026/08/28 14:43:18 [kimi-k3 run=1] p7-prompt
+2026/08/28 14:44:03 [kimi-k3 run=1] p10-prompt
+2026/08/28 14:44:46 [kimi-k3 run=1] p1-prompt
+2026/08/28 14:45:31 [kimi-k3 run=1] p2-prompt
+2026/08/28 14:46:25 [kimi-k3 run=1] p9-prompt
+2026/08/28 14:46:49 [kimi-k3 run=1] p8-prompt
+2026/08/28 14:47:49   ERROR: Post "https://api.moonshot.ai/anthropic/v1/messages": context deadline exceeded
+2026/08/28 14:47:49 [kimi-k3 run=1] p3-prompt
+2026/08/28 14:48:10 [kimi-k3 run=1] p12-prompt
+2026/08/28 14:48:51 [kimi-k3 run=1] p5-prompt
+2026/08/28 14:49:14 [kimi-k3 run=1] p15-prompt
+2026/08/28 14:49:38 [kimi-k3 run=1] p13-prompt
+2026/08/28 14:50:05 [kimi-k3 run=1] p11-prompt
+2026/08/28 14:50:39 [kimi-k3 run=1] p6-prompt
+2026/08/28 14:51:05 [kimi-k3 run=2] p3-prompt
+2026/08/28 14:51:40 [kimi-k3 run=2] p6-prompt
+2026/08/28 14:52:03 [kimi-k3 run=2] p14-prompt
+2026/08/28 14:52:34 [kimi-k3 run=2] p10-prompt
+2026/08/28 14:53:13 [kimi-k3 run=2] p15-prompt
+2026/08/28 14:53:31 [kimi-k3 run=2] p5-prompt
+2026/08/28 14:53:53 [kimi-k3 run=2] p8-prompt
+2026/08/28 14:54:26 [kimi-k3 run=2] p7-prompt
+2026/08/28 14:54:45 [kimi-k3 run=2] p11-prompt
+2026/08/28 14:55:29 [kimi-k3 run=2] p2-prompt
+2026/08/28 14:56:15 [kimi-k3 run=2] p13-prompt
+2026/08/28 14:57:03 [kimi-k3 run=2] p9-prompt
+2026/08/28 14:57:42 [kimi-k3 run=2] p12-prompt
+2026/08/28 14:58:30 [kimi-k3 run=2] p1-prompt
+2026/08/28 14:58:32   ERROR: HTTP 429: {"error":{"type":"engine_overloaded_error","message":"The engine is currently overloaded, please try again later"},"request_id":"eec7138c-a2f0-11f1-a6dc-00163e05d0f4","type":"error"}
+2026/08/28 14:58:32 [kimi-k3 run=3] p12-prompt
+2026/08/28 14:59:09 [kimi-k3 run=3] p2-prompt
+2026/08/28 14:59:27 [kimi-k3 run=3] p15-prompt
+2026/08/28 14:59:41 [kimi-k3 run=3] p7-prompt
+2026/08/28 15:00:02 [kimi-k3 run=3] p3-prompt
+2026/08/28 15:00:34 [kimi-k3 run=3] p11-prompt
+2026/08/28 15:01:18 [kimi-k3 run=3] p13-prompt
+2026/08/28 15:02:18   ERROR: Post "https://api.moonshot.ai/anthropic/v1/messages": context deadline exceeded
+2026/08/28 15:02:18 [kimi-k3 run=3] p10-prompt
+2026/08/28 15:02:19   ERROR: HTTP 429: {"error":{"type":"engine_overloaded_error","message":"The engine is currently overloaded, please try again later"},"request_id":"76b227de-a2f1-11f1-95c4-00163e4282b3","type":"error"}
+2026/08/28 15:02:19 [kimi-k3 run=3] p9-prompt
+2026/08/28 15:02:52 [kimi-k3 run=3] p14-prompt
+2026/08/28 15:03:04 [kimi-k3 run=3] p8-prompt
+2026/08/28 15:03:34 [kimi-k3 run=3] p5-prompt
+2026/08/28 15:03:54 [kimi-k3 run=3] p6-prompt
+2026/08/28 15:04:26 [kimi-k3 run=3] p1-prompt
+2026/08/28 15:04:52 [glm-5.3 run=1] p9-prompt
+2026/08/28 15:05:09 [glm-5.3 run=1] p11-prompt
+2026/08/28 15:05:20 [glm-5.3 run=1] p6-prompt
+2026/08/28 15:05:38 [glm-5.3 run=1] p13-prompt
+2026/08/28 15:05:46 [glm-5.3 run=1] p3-prompt
+2026/08/28 15:05:57 [glm-5.3 run=1] p7-prompt
+2026/08/28 15:06:25 [glm-5.3 run=1] p10-prompt
+2026/08/28 15:06:38 [glm-5.3 run=1] p8-prompt
+2026/08/28 15:06:52 [glm-5.3 run=1] p2-prompt
+2026/08/28 15:07:03 [glm-5.3 run=1] p14-prompt
+2026/08/28 15:07:26 [glm-5.3 run=1] p15-prompt
+2026/08/28 15:07:37 [glm-5.3 run=1] p5-prompt
+2026/08/28 15:07:48 [glm-5.3 run=1] p12-prompt
+2026/08/28 15:07:55 [glm-5.3 run=1] p1-prompt
+2026/08/28 15:08:08 [glm-5.3 run=2] p2-prompt
+2026/08/28 15:08:15 [glm-5.3 run=2] p7-prompt
+2026/08/28 15:08:31 [glm-5.3 run=2] p3-prompt
+2026/08/28 15:08:41 [glm-5.3 run=2] p12-prompt
+2026/08/28 15:08:59 [glm-5.3 run=2] p15-prompt
+2026/08/28 15:09:05 [glm-5.3 run=2] p14-prompt
+2026/08/28 15:09:28 [glm-5.3 run=2] p10-prompt
+2026/08/28 15:09:36 [glm-5.3 run=2] p9-prompt
+2026/08/28 15:09:49 [glm-5.3 run=2] p13-prompt
+2026/08/28 15:10:04 [glm-5.3 run=2] p5-prompt
+2026/08/28 15:10:11 [glm-5.3 run=2] p8-prompt
+2026/08/28 15:10:19 [glm-5.3 run=2] p1-prompt
+2026/08/28 15:10:34 [glm-5.3 run=2] p6-prompt
+2026/08/28 15:10:48 [glm-5.3 run=2] p11-prompt
+2026/08/28 15:11:00 [glm-5.3 run=3] p7-prompt
+2026/08/28 15:11:20 [glm-5.3 run=3] p1-prompt
+2026/08/28 15:11:35 [glm-5.3 run=3] p14-prompt
+2026/08/28 15:11:53 [glm-5.3 run=3] p6-prompt
+2026/08/28 15:12:08 [glm-5.3 run=3] p15-prompt
+2026/08/28 15:12:19 [glm-5.3 run=3] p13-prompt
+2026/08/28 15:12:28 [glm-5.3 run=3] p2-prompt
+2026/08/28 15:12:40 [glm-5.3 run=3] p5-prompt
+2026/08/28 15:12:46 [glm-5.3 run=3] p3-prompt
+2026/08/28 15:13:00 [glm-5.3 run=3] p8-prompt
+2026/08/28 15:13:09 [glm-5.3 run=3] p11-prompt
+2026/08/28 15:13:18 [glm-5.3 run=3] p12-prompt
+2026/08/28 15:13:48 [glm-5.3 run=3] p10-prompt
+2026/08/28 15:14:03 [glm-5.3 run=3] p9-prompt
+2026/08/28 15:14:15 [qwen3.8-max run=1] p13-prompt
+2026/08/28 15:14:46 [qwen3.8-max run=1] p5-prompt
+2026/08/28 15:14:58 [qwen3.8-max run=1] p15-prompt
+2026/08/28 15:15:14 [qwen3.8-max run=1] p8-prompt
+2026/08/28 15:15:46 [qwen3.8-max run=1] p9-prompt
+2026/08/28 15:16:04 [qwen3.8-max run=1] p1-prompt
+2026/08/28 15:16:29 [qwen3.8-max run=1] p12-prompt
+2026/08/28 15:16:53 [qwen3.8-max run=1] p3-prompt
+2026/08/28 15:17:12 [qwen3.8-max run=1] p11-prompt
+2026/08/28 15:17:33 [qwen3.8-max run=1] p2-prompt
+2026/08/28 15:18:01 [qwen3.8-max run=1] p7-prompt
+2026/08/28 15:18:36 [qwen3.8-max run=1] p14-prompt
+2026/08/28 15:18:50 [qwen3.8-max run=1] p10-prompt
+2026/08/28 15:19:04 [qwen3.8-max run=1] p6-prompt
+2026/08/28 15:19:38 [qwen3.8-max run=2] p13-prompt
+2026/08/28 15:19:49 [qwen3.8-max run=2] p2-prompt
+2026/08/28 15:20:49   ERROR: Post "https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1/chat/completions": context deadline exceeded
+2026/08/28 15:20:49 [qwen3.8-max run=2] p5-prompt
+2026/08/28 15:21:03 [qwen3.8-max run=2] p6-prompt
+2026/08/28 15:21:46 [qwen3.8-max run=2] p12-prompt
+2026/08/28 15:22:06 [qwen3.8-max run=2] p14-prompt
+2026/08/28 15:22:31 [qwen3.8-max run=2] p11-prompt
+2026/08/28 15:22:56 [qwen3.8-max run=2] p9-prompt
+2026/08/28 15:23:18 [qwen3.8-max run=2] p10-prompt
+2026/08/28 15:24:19 [qwen3.8-max run=2] p1-prompt
+2026/08/28 15:24:40 [qwen3.8-max run=2] p15-prompt
+2026/08/28 15:25:21 [qwen3.8-max run=2] p8-prompt
+2026/08/28 15:25:44 [qwen3.8-max run=2] p7-prompt
+2026/08/28 15:26:13 [qwen3.8-max run=2] p3-prompt
+2026/08/28 15:26:32 [qwen3.8-max run=3] p13-prompt
+2026/08/28 15:26:46 [qwen3.8-max run=3] p11-prompt
+2026/08/28 15:27:04 [qwen3.8-max run=3] p5-prompt
+2026/08/28 15:27:20 [qwen3.8-max run=3] p12-prompt
+2026/08/28 15:27:37 [qwen3.8-max run=3] p6-prompt
+2026/08/28 15:28:29 [qwen3.8-max run=3] p1-prompt
+2026/08/28 15:28:46 [qwen3.8-max run=3] p9-prompt
+2026/08/28 15:29:20 [qwen3.8-max run=3] p3-prompt
+2026/08/28 15:29:33 [qwen3.8-max run=3] p15-prompt
+2026/08/28 15:29:51 [qwen3.8-max run=3] p8-prompt
+2026/08/28 15:30:08 [qwen3.8-max run=3] p2-prompt
+2026/08/28 15:30:26 [qwen3.8-max run=3] p14-prompt
+2026/08/28 15:30:50 [qwen3.8-max run=3] p10-prompt
+2026/08/28 15:31:36 [qwen3.8-max run=3] p7-prompt
+2026/08/28 15:31:52 [gemini-3.7-flash run=1] p2-prompt
+2026/08/28 15:32:18 [gemini-3.7-flash run=1] p7-prompt
+2026/08/28 15:32:58 [gemini-3.7-flash run=1] p1-prompt
+2026/08/28 15:33:40 [gemini-3.7-flash run=1] p8-prompt
+2026/08/28 15:34:13 [gemini-3.7-flash run=1] p14-prompt
+2026/08/28 15:34:55 [gemini-3.7-flash run=1] p9-prompt
+2026/08/28 15:35:44 [gemini-3.7-flash run=1] p6-prompt
+2026/08/28 15:36:23 [gemini-3.7-flash run=1] p10-prompt
+2026/08/28 15:36:55 [gemini-3.7-flash run=1] p5-prompt
+2026/08/28 15:37:28 [gemini-3.7-flash run=1] p12-prompt
+2026/08/28 15:38:05 [gemini-3.7-flash run=1] p3-prompt
+2026/08/28 15:38:37 [gemini-3.7-flash run=1] p15-prompt
+2026/08/28 15:39:07 [gemini-3.7-flash run=1] p13-prompt
+2026/08/28 15:39:39 [gemini-3.7-flash run=1] p11-prompt
+2026/08/28 15:40:25 [gemini-3.7-flash run=2] p15-prompt
+2026/08/28 15:41:03 [gemini-3.7-flash run=2] p6-prompt
+2026/08/28 15:41:22 [gemini-3.7-flash run=2] p5-prompt
+2026/08/28 15:42:07 [gemini-3.7-flash run=2] p9-prompt
+2026/08/28 15:42:48 [gemini-3.7-flash run=2] p1-prompt
+2026/08/28 15:43:15 [gemini-3.7-flash run=2] p2-prompt
+2026/08/28 15:44:06 [gemini-3.7-flash run=2] p8-prompt
+2026/08/28 15:44:58 [gemini-3.7-flash run=2] p11-prompt
+2026/08/28 15:45:33 [gemini-3.7-flash run=2] p7-prompt
+2026/08/28 15:45:53 [gemini-3.7-flash run=2] p3-prompt
+2026/08/28 15:46:30 [gemini-3.7-flash run=2] p13-prompt
+2026/08/28 15:47:27 [gemini-3.7-flash run=2] p10-prompt
+2026/08/28 15:48:06 [gemini-3.7-flash run=2] p12-prompt
+2026/08/28 15:48:36 [gemini-3.7-flash run=2] p14-prompt
+2026/08/28 15:49:20 [gemini-3.7-flash run=3] p10-prompt
+2026/08/28 15:49:42 [gemini-3.7-flash run=3] p5-prompt
+2026/08/28 15:50:08 [gemini-3.7-flash run=3] p8-prompt
+2026/08/28 15:50:40 [gemini-3.7-flash run=3] p2-prompt
+2026/08/28 15:51:01 [gemini-3.7-flash run=3] p13-prompt
+2026/08/28 15:51:18 [gemini-3.7-flash run=3] p14-prompt
+2026/08/28 15:51:51 [gemini-3.7-flash run=3] p15-prompt
+2026/08/28 15:52:25 [gemini-3.7-flash run=3] p1-prompt
+2026/08/28 15:52:56 [gemini-3.7-flash run=3] p3-prompt
+2026/08/28 15:53:27 [gemini-3.7-flash run=3] p12-prompt
+2026/08/28 15:54:13 [gemini-3.7-flash run=3] p7-prompt
+2026/08/28 15:54:38 [gemini-3.7-flash run=3] p9-prompt
+2026/08/28 15:55:36 [gemini-3.7-flash run=3] p11-prompt
+2026/08/28 15:56:07 [gemini-3.7-flash run=3] p6-prompt
+2026/08/28 15:56:50 done — results in results.jsonl, claims in drift.db
+2026/08/28 16:11:12 probe hash: 8fa68ca01acb8f4654d2e7eefc652799a4f5f2b686af5544bdf1e62b937b9632
+2026/08/28 16:11:12 loaded 14 probes
+2026/08/28 16:11:12 loaded 1 providers
+2026/08/28 16:11:12 [gpt-5.6-sol run=1] p10-prompt
+2026/08/28 16:11:18 [gpt-5.6-sol run=1] p9-prompt
+2026/08/28 16:11:24 [gpt-5.6-sol run=1] p14-prompt
+2026/08/28 16:11:28 [gpt-5.6-sol run=1] p2-prompt
+2026/08/28 16:11:33 [gpt-5.6-sol run=1] p12-prompt
+2026/08/28 16:11:38 [gpt-5.6-sol run=1] p3-prompt
+2026/08/28 16:11:43 [gpt-5.6-sol run=1] p1-prompt
+2026/08/28 16:11:47 [gpt-5.6-sol run=1] p7-prompt
+2026/08/28 16:11:51 [gpt-5.6-sol run=1] p13-prompt
+2026/08/28 16:11:54 [gpt-5.6-sol run=1] p5-prompt
+2026/08/28 16:11:58 [gpt-5.6-sol run=1] p11-prompt
+2026/08/28 16:12:02 [gpt-5.6-sol run=1] p15-prompt
+2026/08/28 16:12:06 [gpt-5.6-sol run=1] p8-prompt
+2026/08/28 16:12:10 [gpt-5.6-sol run=1] p6-prompt
+2026/08/28 16:12:14 [gpt-5.6-sol run=2] p8-prompt
+2026/08/28 16:12:19 [gpt-5.6-sol run=2] p5-prompt
+2026/08/28 16:12:29 [gpt-5.6-sol run=2] p14-prompt
+2026/08/28 16:12:33 [gpt-5.6-sol run=2] p15-prompt
+2026/08/28 16:12:38 [gpt-5.6-sol run=2] p11-prompt
+2026/08/28 16:12:42 [gpt-5.6-sol run=2] p10-prompt
+2026/08/28 16:12:47 [gpt-5.6-sol run=2] p6-prompt
+2026/08/28 16:12:51 [gpt-5.6-sol run=2] p2-prompt
+2026/08/28 16:12:55 [gpt-5.6-sol run=2] p7-prompt
+2026/08/28 16:12:59 [gpt-5.6-sol run=2] p1-prompt
+2026/08/28 16:13:03 [gpt-5.6-sol run=2] p9-prompt
+2026/08/28 16:13:08 [gpt-5.6-sol run=2] p12-prompt
+2026/08/28 16:13:13 [gpt-5.6-sol run=2] p13-prompt
+2026/08/28 16:13:16 [gpt-5.6-sol run=2] p3-prompt
+2026/08/28 16:13:20 [gpt-5.6-sol run=3] p14-prompt
+2026/08/28 16:13:24 [gpt-5.6-sol run=3] p3-prompt
+2026/08/28 16:13:28 [gpt-5.6-sol run=3] p11-prompt
+2026/08/28 16:13:34 [gpt-5.6-sol run=3] p15-prompt
+2026/08/28 16:13:38 [gpt-5.6-sol run=3] p2-prompt
+2026/08/28 16:13:43 [gpt-5.6-sol run=3] p5-prompt
+2026/08/28 16:13:47 [gpt-5.6-sol run=3] p1-prompt
+2026/08/28 16:13:52 [gpt-5.6-sol run=3] p6-prompt
+2026/08/28 16:13:56 [gpt-5.6-sol run=3] p12-prompt
+2026/08/28 16:14:01 [gpt-5.6-sol run=3] p9-prompt
+2026/08/28 16:14:06 [gpt-5.6-sol run=3] p10-prompt
+2026/08/28 16:14:11 [gpt-5.6-sol run=3] p7-prompt
+2026/08/28 16:14:14 [gpt-5.6-sol run=3] p8-prompt
+2026/08/28 16:14:18 [gpt-5.6-sol run=3] p13-prompt
+2026/08/28 16:14:22 done — results in results.jsonl, claims in drift.db

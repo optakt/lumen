@@ -36,10 +36,10 @@
   },
   {
     "name": "deepseek-v4-pro",
-    "model": "deepseek-v4-pro",
+    "model": "deepseek-chat",
     "url": "https://api.deepseek.com",
     "api_key_env": "DEEPSEEK_API_KEY",
-    "plugin": "messages"
+    "plugin": "completions"
   },
   {
     "name": "kimi-k3",
