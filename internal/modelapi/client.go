@@ -16,15 +16,18 @@ import (
 
 // Provider describes one OpenAI- or Anthropic-compatible endpoint.
 type Provider struct {
-	Name           string   `json:"name"`
-	Model          string   `json:"model"`
-	URL            string   `json:"url"`
-	APIKey         string   `json:"api_key_env"`
-	Plugin         string   `json:"plugin"` // "messages" or "completions"
-	MaxTokens      int      `json:"max_tokens,omitempty"`
-	Temperature    *float64 `json:"temperature,omitempty"`
-	Seed           *int64   `json:"seed,omitempty"`
-	MaxTokensParam string   `json:"max_tokens_param,omitempty"`
+	Name           string         `json:"name"`
+	Model          string         `json:"model"`
+	URL            string         `json:"url"`
+	APIKey         string         `json:"api_key_env"`
+	Plugin         string         `json:"plugin"` // "messages" or "completions"
+	MaxTokens      int            `json:"max_tokens,omitempty"`
+	Temperature    *float64       `json:"temperature,omitempty"`
+	Seed           *int64         `json:"seed,omitempty"`
+	MaxTokensParam string         `json:"max_tokens_param,omitempty"`
+	StudyRole      string         `json:"study_role,omitempty"` // "known" or "open-set"; ignored by transport
+	TimeoutSeconds int            `json:"timeout_seconds,omitempty"`
+	Extra          map[string]any `json:"extra,omitempty"`
 }
 
 // Message is one turn in a provider-neutral conversation.
@@ -55,6 +58,11 @@ func (c *Client) Complete(ctx context.Context, p Provider, apiKey, system string
 	httpClient := c.HTTP
 	if httpClient == nil {
 		httpClient = &http.Client{Timeout: 2 * time.Minute}
+	}
+	if p.TimeoutSeconds > 0 {
+		clone := *httpClient
+		clone.Timeout = time.Duration(p.TimeoutSeconds) * time.Second
+		httpClient = &clone
 	}
 	maxTokens := c.MaxTokens
 	if p.MaxTokens > 0 {
@@ -93,6 +101,9 @@ func (c *Client) Complete(ctx context.Context, p Provider, apiKey, system string
 		if p.Seed != nil {
 			payload.(map[string]any)["seed"] = *p.Seed
 		}
+		for key, value := range p.Extra {
+			payload.(map[string]any)[key] = value
+		}
 	case "messages":
 		endpoint = strings.TrimSuffix(p.URL, "/") + "/v1/messages"
 		payload = map[string]any{
@@ -103,6 +114,9 @@ func (c *Client) Complete(ctx context.Context, p Provider, apiKey, system string
 		}
 		if p.Temperature != nil {
 			payload.(map[string]any)["temperature"] = *p.Temperature
+		}
+		for key, value := range p.Extra {
+			payload.(map[string]any)[key] = value
 		}
 	default:
 		return "", fmt.Errorf("unknown provider plugin %q", p.Plugin)

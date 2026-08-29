@@ -1,0 +1,43 @@
+episode recovery-chain-s1
+  family: recovery-hysteresis
+  variant: s1
+  topology: chain
+  claim: "Recovered focal belief x0045b4 remains supported."
+  world: "The derivation graph is x0045b1-\u003ex0045b2, x0045b2-\u003ex0045b3, x0045b3-\u003ex0045b4, x0045r0-\u003ex0045b1, x0045r1-\u003ex0045u1. Record x0045r0 supports the focal path and x0045r1 is independent. If x0045r0 is retracted, every reachable dependent becomes suspect. A corrected record x0045r0c may later replace x0045r0 with formally equivalent support; recovery then restores the same graph positions and confidence rather than creating a new belief."
+  prior: [0.720000, 0.840000]
+  step graph-loaded
+    role: graph-loaded
+    intervention: "All records and beliefs are valid and active. Report the focal belief and all belief-node states."
+    belief: [0.720000, 0.840000]
+    state: active
+    accepted_support: ["x0045r0","x0045r1"]
+    rejected_support: []
+    node_states: {"x0045b1":"active","x0045b2":"active","x0045b3":"active","x0045b4":"active","x0045u1":"active"}
+    action: hold
+  step retracted
+    role: retracted
+    intervention: "Retract x0045r0 after corruption is found. Apply the causal cascade."
+    belief: [0.720000, 0.840000]
+    state: suspect
+    accepted_support: ["x0045r1"]
+    rejected_support: ["x0045r0"]
+    node_states: {"x0045b1":"suspect","x0045b2":"suspect","x0045b3":"suspect","x0045b4":"suspect","x0045u1":"active"}
+    action: contract
+  step corrected
+    role: corrected
+    intervention: "Introduce corrected record x0045r0c. It has formally equivalent evidential strength and replaces x0045r0 at the same derivation positions."
+    belief: [0.720000, 0.840000]
+    state: active
+    accepted_support: ["x0045r0c","x0045r1"]
+    rejected_support: ["x0045r0"]
+    node_states: {"x0045b1":"active","x0045b2":"active","x0045b3":"active","x0045b4":"active","x0045u1":"active"}
+    action: recover
+  step stability
+    role: stability
+    intervention: "No further evidence arrives. Report whether any residual suspicion or confidence hysteresis remains under the declared recovery semantics."
+    belief: [0.720000, 0.840000]
+    state: active
+    accepted_support: ["x0045r0c","x0045r1"]
+    rejected_support: ["x0045r0"]
+    node_states: {"x0045b1":"active","x0045b2":"active","x0045b3":"active","x0045b4":"active","x0045u1":"active"}
+    action: hold

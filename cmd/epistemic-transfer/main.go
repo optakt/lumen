@@ -217,7 +217,11 @@ func runEpisode(client *modelapi.Client, provider modelapi.Provider, apiKey stri
 		var lastErr error
 		for attempt := 1; attempt <= 3; attempt++ {
 			log.Printf("[%s run=%d] %s step=%s attempt=%d", provider.Name, run, episode.ID, step.ID, attempt)
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			timeout := 2 * time.Minute
+			if provider.TimeoutSeconds > 0 {
+				timeout = time.Duration(provider.TimeoutSeconds) * time.Second
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
 			response, err := client.Complete(ctx, provider, apiKey, systemPrompt, messages)
 			cancel()
 			raw = response

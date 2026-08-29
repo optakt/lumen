@@ -1,0 +1,53 @@
+episode retrodiction-chain-s1
+  family: retrodictive-validity
+  variant: s1
+  topology: chain
+  claim: "Synthetic system X0023 was in state K at time 20."
+  world: "At time 0 the prior applies. At time 10 sources x0023e1, x0023e2 arrive; at time 20 sources x0023e3, x0023e4 arrive. Use the declared log-odds update rule with evidence x0023e1 LR=[2.00,2.40] confidence=0.90; x0023e2 LR=[1.80,2.20] confidence=0.85; x0023e3 LR=[1.60,2.00] confidence=0.80; x0023e4 LR=[1.40,1.80] confidence=0.75. The correlation graph is x0023e1--x0023e2 r=0.70; x0023e2--x0023e3 r=0.60; x0023e3--x0023e4 r=0.50 and uses weight_i=max(0.1,1-sum_j(r_ij)/2). At time 30, the time-10 sources are retracted and current confidence is re-evaluated from surviving support. Retraction changes current support but never rewrites what was justified at time 20."
+  prior: [0.300000, 0.500000]
+  step time-zero
+    role: prior
+    intervention: "No evidence has been observed. Use the declared prior."
+    belief: [0.300000, 0.500000]
+    state: active
+    accepted_support: []
+    rejected_support: []
+    node_states: {}
+    action: hold
+  step evidence-one
+    role: evidence-one
+    intervention: "It is time 10. Observe sources x0023e1, x0023e2 and update from the prior using their induced correlation subgraph."
+    belief: [0.476797, 0.728495]
+    state: active
+    accepted_support: ["x0023e1","x0023e2"]
+    rejected_support: []
+    node_states: {}
+    action: revise
+  step evidence-two
+    role: evidence-two
+    intervention: "It is time 20. Observe sources x0023e3, x0023e4 and update using all four valid sources and the full correlation graph."
+    belief: [0.531129, 0.801083]
+    state: active
+    accepted_support: ["x0023e1","x0023e2","x0023e3","x0023e4"]
+    rejected_support: []
+    node_states: {}
+    action: revise
+  step invalidated
+    role: invalidated
+    intervention: "It is time 30. Retract the time-10 sources x0023e1, x0023e2 and re-evaluate current confidence from surviving support x0023e3, x0023e4. Keep the belief suspect because its historical derivation changed."
+    belief: [0.411809, 0.688549]
+    state: suspect
+    accepted_support: ["x0023e3","x0023e4"]
+    rejected_support: ["x0023e1","x0023e2"]
+    node_states: {}
+    action: contract
+  step historical-query
+    role: historical-query
+    intervention: "Still at time 30: reconstruct the interval justified at time 20, before the retractions were known. Return current confidence as belief and the time-20 interval as historical_belief."
+    belief: [0.411809, 0.688549]
+    state: suspect
+    accepted_support: ["x0023e3","x0023e4"]
+    rejected_support: ["x0023e1","x0023e2"]
+    node_states: {}
+    historical_belief: [0.531129, 0.801083]
+    action: hold

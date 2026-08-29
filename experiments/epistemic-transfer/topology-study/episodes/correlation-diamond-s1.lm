@@ -1,0 +1,43 @@
+episode correlation-diamond-s1
+  family: correlation-disclosure
+  variant: s1
+  topology: diamond
+  claim: "Process X0201 stabilizes synthetic material X0201X."
+  world: "Only sources x02011, x02012, x02013, x02014 bear on the focal claim. The prior is updated in log-odds space. For source i, effective LR endpoint = 1 + confidence_i*(LR_i-1). Before correlation disclosure, source weight is 1. After disclosure, weight_i=max(0.1,1-sum_j(r_ij)/2), and weighted log effective LRs are added to prior log odds. Evidence: x02011 LR=[1.80,2.20] confidence=0.90; x02012 LR=[1.60,2.00] confidence=0.85; x02013 LR=[1.50,1.90] confidence=0.80; x02014 LR=[1.40,1.80] confidence=0.75. Correlation graph on disclosure: x02011--x02012 r=0.70; x02011--x02013 r=0.70; x02012--x02014 r=0.60; x02013--x02014 r=0.60."
+  prior: [0.350000, 0.550000]
+  step prior
+    role: prior
+    intervention: "No evidence has been observed. Use the declared prior."
+    belief: [0.350000, 0.550000]
+    state: active
+    accepted_support: []
+    rejected_support: []
+    node_states: {}
+    action: hold
+  step all-evidence
+    role: accumulated
+    intervention: "All four evidence sources are observed and currently represented as independent. Apply the declared update rule."
+    belief: [0.717933, 0.928279]
+    state: active
+    accepted_support: ["x02011","x02012","x02013","x02014"]
+    rejected_support: []
+    node_states: {}
+    action: revise
+  step correlation-disclosed
+    role: disclosed
+    intervention: "Audit reveals the following symmetric correlation graph: x02011--x02012 r=0.70; x02011--x02013 r=0.70; x02012--x02014 r=0.60; x02013--x02014 r=0.60. Recompute under the declared weighting rule without discarding any observation."
+    belief: [0.477667, 0.733707]
+    state: active
+    accepted_support: ["x02011","x02012","x02013","x02014"]
+    rejected_support: []
+    node_states: {}
+    action: revise
+  step irrelevant
+    role: isolation
+    intervention: "Source x0201Z reports an unrelated color change and has no edge to the focal claim. Preserve the epistemic state."
+    belief: [0.477667, 0.733707]
+    state: active
+    accepted_support: ["x02011","x02012","x02013","x02014"]
+    rejected_support: []
+    node_states: {}
+    action: hold

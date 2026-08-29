@@ -1,0 +1,43 @@
+episode correlation-mesh-s2
+  family: correlation-disclosure
+  variant: s2
+  topology: mesh
+  claim: "Process X0302 stabilizes synthetic material X0302X."
+  world: "Only sources x03021, x03022, x03023, x03024 bear on the focal claim. The prior is updated in log-odds space. For source i, effective LR endpoint = 1 + confidence_i*(LR_i-1). Before correlation disclosure, source weight is 1. After disclosure, weight_i=max(0.1,1-sum_j(r_ij)/2), and weighted log effective LRs are added to prior log odds. Evidence: x03021 LR=[1.80,2.20] confidence=0.90; x03022 LR=[1.60,2.00] confidence=0.85; x03023 LR=[1.50,1.90] confidence=0.80; x03024 LR=[1.40,1.80] confidence=0.75. Correlation graph on disclosure: x03021--x03022 r=0.35; x03021--x03023 r=0.35; x03021--x03024 r=0.35; x03022--x03023 r=0.35; x03022--x03024 r=0.35; x03023--x03024 r=0.35."
+  prior: [0.350000, 0.550000]
+  step prior
+    role: prior
+    intervention: "No evidence has been observed. Use the declared prior."
+    belief: [0.350000, 0.550000]
+    state: active
+    accepted_support: []
+    rejected_support: []
+    node_states: {}
+    action: hold
+  step all-evidence
+    role: accumulated
+    intervention: "All four evidence sources are observed and currently represented as independent. Apply the declared update rule."
+    belief: [0.717933, 0.928279]
+    state: active
+    accepted_support: ["x03021","x03022","x03023","x03024"]
+    rejected_support: []
+    node_states: {}
+    action: revise
+  step correlation-disclosed
+    role: disclosed
+    intervention: "Audit reveals the following symmetric correlation graph: x03021--x03022 r=0.35; x03021--x03023 r=0.35; x03021--x03024 r=0.35; x03022--x03023 r=0.35; x03022--x03024 r=0.35; x03023--x03024 r=0.35. Recompute under the declared weighting rule without discarding any observation."
+    belief: [0.529656, 0.789450]
+    state: active
+    accepted_support: ["x03021","x03022","x03023","x03024"]
+    rejected_support: []
+    node_states: {}
+    action: revise
+  step irrelevant
+    role: isolation
+    intervention: "Source x0302Z reports an unrelated color change and has no edge to the focal claim. Preserve the epistemic state."
+    belief: [0.529656, 0.789450]
+    state: active
+    accepted_support: ["x03021","x03022","x03023","x03024"]
+    rejected_support: []
+    node_states: {}
+    action: hold

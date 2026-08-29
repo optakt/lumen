@@ -1,6 +1,7 @@
 package transfer
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -25,5 +26,34 @@ func TestPilotEpisodesParse(t *testing.T) {
 	}
 	if len(families) != 3 || variants["a"] != 3 || variants["b"] != 3 {
 		t.Fatalf("families=%v variants=%v", families, variants)
+	}
+}
+
+func TestTopologyStudyFixturesMatchGenerator(t *testing.T) {
+	episodes, err := StudyEpisodes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := filepath.Join("..", "experiments", "epistemic-transfer", "topology-study", "episodes")
+	paths, err := filepath.Glob(filepath.Join(base, "*.lm"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(paths) != len(episodes) {
+		t.Fatalf("fixture count=%d generated=%d", len(paths), len(episodes))
+	}
+	for _, episode := range episodes {
+		want, err := RenderEpisode(episode)
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(base, episode.ID+".lm")
+		got, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(got) != want {
+			t.Fatalf("fixture drift: %s; regenerate with cmd/generate-transfer-study", path)
+		}
 	}
 }

@@ -54,15 +54,16 @@ type Step struct {
 
 // Episode is one synthetic micro-world and its intervention schedule.
 type Episode struct {
-	ID      string
-	Family  string
-	Variant string
-	Claim   string
-	World   string
-	Prior   Interval
-	Steps   []Step
-	Path    string
-	Hash    string
+	ID       string
+	Family   string
+	Variant  string
+	Topology string
+	Claim    string
+	World    string
+	Prior    Interval
+	Steps    []Step
+	Path     string
+	Hash     string
 }
 
 // MarshalState returns the canonical JSON representation injected as the
@@ -144,6 +145,8 @@ func ParseFile(path string) (*Episode, error) {
 				ep.Family = value
 			case "variant":
 				ep.Variant = value
+			case "topology":
+				ep.Topology = value
 			case "claim":
 				ep.Claim, err = parseString(value)
 			case "world":
@@ -198,6 +201,9 @@ func ParseFile(path string) (*Episode, error) {
 func (e *Episode) Validate() error {
 	if e.ID == "" || e.Family == "" || e.Variant == "" || e.Claim == "" || e.World == "" {
 		return fmt.Errorf("episode requires id, family, variant, claim, and world")
+	}
+	if e.Topology == "" {
+		e.Topology = e.Variant // legacy pilot episodes used variant as the structural split
 	}
 	if !e.Prior.Valid() {
 		return fmt.Errorf("invalid prior [%g, %g]", e.Prior.Lo, e.Prior.Hi)
