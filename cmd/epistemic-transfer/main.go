@@ -61,6 +61,11 @@ type signatureKey struct {
 	variant string
 }
 
+type runJob struct {
+	episode *transfer.Episode
+	run     int
+}
+
 func main() {
 	mode := flag.String("mode", "run", "run or analyze")
 	episodesDir := flag.String("episodes", "episodes", "directory containing .lm episodes")
@@ -120,63 +125,69 @@ func runAll(providers []modelapi.Provider, episodes []*transfer.Episode, runs in
 		go func(providerIndex int, provider modelapi.Provider, apiKey string) {
 			defer wg.Done()
 			rng := rand.New(rand.NewPCG(seed+uint64(providerIndex), uint64(providerIndex)+1))
-			jobs := make([]struct {
-				episode *transfer.Episode
-				run     int
-			}, 0, len(episodes)*runs)
+			jobs := make([]runJob, 0, len(episodes)*runs)
 			for run := 1; run <= runs; run++ {
 				for _, episode := range episodes {
 					key := runKey(provider.Name, episode.ID, run)
 					if !completed[key] {
-						jobs = append(jobs, struct {
-							episode *transfer.Episode
-							run     int
-						}{episode, run})
+						jobs = append(jobs, runJob{episode: episode, run: run})
 					}
 				}
 			}
 			rng.Shuffle(len(jobs), func(i, j int) { jobs[i], jobs[j] = jobs[j], jobs[i] })
 
-			for _, job := range jobs {
-				log.Printf("[%s run=%d] %s", provider.Name, job.run, job.episode.ID)
-				result, err := runEpisode(client, provider, apiKey, job.episode, job.run)
-				if err != nil {
-					log.Printf("[%s run=%d] %s ERROR: %v", provider.Name, job.run, job.episode.ID, err)
-					errMu.Lock()
-					if firstErr == nil {
-						firstErr = err
-					}
-					errMu.Unlock()
-					continue
-				}
-				line, err := json.Marshal(result)
-				if err != nil {
-					errMu.Lock()
-					if firstErr == nil {
-						firstErr = err
-					}
-					errMu.Unlock()
-					continue
-				}
-				writeMu.Lock()
-				_, err = out.Write(append(line, '\n'))
-				writeMu.Unlock()
-				if err != nil {
-					errMu.Lock()
-					if firstErr == nil {
-						firstErr = err
-					}
-					errMu.Unlock()
-					return
-				}
-				if !result.Complete {
-					errMu.Lock()
-					if firstErr == nil {
-						firstErr = fmt.Errorf("%s run=%d episode=%s incomplete", provider.Name, job.run, job.episode.ID)
-					}
-					errMu.Unlock()
-				}
+			workers := provider.Concurrency
+			if workers < 1 {
+				workers = 1
 			}
+			if workers > len(jobs) {
+				workers = len(jobs)
+			}
+			if workers == 0 {
+				return
+			}
+			jobCh := make(chan runJob)
+			var providerWG sync.WaitGroup
+			providerWG.Add(workers)
+			for worker := 0; worker < workers; worker++ {
+				go func() {
+					defer providerWG.Done()
+					for job := range jobCh {
+						log.Printf("[%s run=%d] %s", provider.Name, job.run, job.episode.ID)
+						result, err := runEpisode(client, provider, apiKey, job.episode, job.run)
+						if err == nil {
+							var line []byte
+							line, err = json.Marshal(result)
+							if err == nil {
+								writeMu.Lock()
+								_, err = out.Write(append(line, '\n'))
+								writeMu.Unlock()
+							}
+						}
+						if err != nil {
+							log.Printf("[%s run=%d] %s ERROR: %v", provider.Name, job.run, job.episode.ID, err)
+							errMu.Lock()
+							if firstErr == nil {
+								firstErr = err
+							}
+							errMu.Unlock()
+							continue
+						}
+						if !result.Complete {
+							errMu.Lock()
+							if firstErr == nil {
+								firstErr = fmt.Errorf("%s run=%d episode=%s incomplete", provider.Name, job.run, job.episode.ID)
+							}
+							errMu.Unlock()
+						}
+					}
+				}()
+			}
+			for _, job := range jobs {
+				jobCh <- job
+			}
+			close(jobCh)
+			providerWG.Wait()
 		}(providerIndex, provider, apiKey)
 	}
 	wg.Wait()

@@ -28,6 +28,7 @@ type Provider struct {
 	StudyRole      string         `json:"study_role,omitempty"` // "known" or "open-set"; ignored by transport
 	TimeoutSeconds int            `json:"timeout_seconds,omitempty"`
 	Extra          map[string]any `json:"extra,omitempty"`
+	Concurrency    int            `json:"concurrency,omitempty"` // experiment runner hint; ignored by transport
 }
 
 // Message is one turn in a provider-neutral conversation.
