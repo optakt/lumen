@@ -23,5 +23,7 @@
 .idea/
 .vscode/
 *.swp
-calibrate-drift
-calibrate-drift
+/calibrate-drift
+
+# Reproducible experiment telemetry (raw result corpora are tracked)
+experiments/epistemic-transfer/*/run.log

@@ -116,14 +116,19 @@ func (t Trajectory) Features(staticOnly bool) (FeatureVector, error) {
 	switch t.Episode.Family {
 	case "correlation-disclosure":
 		before, after, ok := rolePair(t, "independent", "correlated")
+		beforeRole, afterRole := "independent", "correlated"
+		if !ok {
+			before, after, ok = rolePair(t, "accumulated", "disclosed")
+			beforeRole, afterRole = "accumulated", "disclosed"
+		}
 		valid := ok && fieldValid(before, "belief") && fieldValid(after, "belief")
 		features["correlation-disclosure.discount_valid"] = boolFloat(valid)
 		features["correlation-disclosure.discount"] = 0
 		features["correlation-disclosure.discount_residual"] = 0
 		if valid {
 			features["correlation-disclosure.discount"] = before.State.Belief.Midpoint() - after.State.Belief.Midpoint()
-			refBefore := referenceByRole(t.Episode, "independent")
-			refAfter := referenceByRole(t.Episode, "correlated")
+			refBefore := referenceByRole(t.Episode, beforeRole)
+			refAfter := referenceByRole(t.Episode, afterRole)
 			features["correlation-disclosure.discount_residual"] = features["correlation-disclosure.discount"] - (refBefore.Belief.Midpoint() - refAfter.Belief.Midpoint())
 		}
 	case "retraction-cascade":
@@ -146,8 +151,69 @@ func (t Trajectory) Features(staticOnly bool) (FeatureVector, error) {
 		if valid {
 			features["retrodictive-validity.error"] = intervalMAE(*obs.State.HistoricalBelief, *ref.HistoricalBelief)
 		}
+	case "source-reliability-reversal":
+		reports, downgrade, okDown := rolePair(t, "reports", "downgrade")
+		downgradeAgain, reversal, okUp := rolePair(t, "downgrade", "reversal")
+		valid := okDown && okUp && fieldValid(reports, "belief") && fieldValid(downgrade, "belief") && fieldValid(downgradeAgain, "belief") && fieldValid(reversal, "belief")
+		features["source-reliability-reversal.elasticity_valid"] = boolFloat(valid)
+		features["source-reliability-reversal.downgrade_delta"] = 0
+		features["source-reliability-reversal.upgrade_delta"] = 0
+		features["source-reliability-reversal.asymmetry"] = 0
+		if valid {
+			down := reports.State.Belief.Midpoint() - downgrade.State.Belief.Midpoint()
+			up := reversal.State.Belief.Midpoint() - downgradeAgain.State.Belief.Midpoint()
+			features["source-reliability-reversal.downgrade_delta"] = down
+			features["source-reliability-reversal.upgrade_delta"] = up
+			features["source-reliability-reversal.asymmetry"] = up - down
+		}
+	case "recovery-hysteresis":
+		corrected, ref, ok := roleState(t, "corrected")
+		stability, _, stableOK := roleState(t, "stability")
+		valid := ok && stableOK && fieldValid(corrected, "belief") && fieldValid(stability, "belief")
+		features["recovery-hysteresis.valid"] = boolFloat(valid)
+		features["recovery-hysteresis.immediate"] = 0
+		features["recovery-hysteresis.residual"] = 0
+		features["recovery-hysteresis.node_recovery"] = 0
+		if valid {
+			features["recovery-hysteresis.immediate"] = corrected.State.Belief.Midpoint() - ref.Belief.Midpoint()
+			features["recovery-hysteresis.residual"] = stability.State.Belief.Midpoint() - ref.Belief.Midpoint()
+			if fieldValid(corrected, "node_states") {
+				features["recovery-hysteresis.node_recovery"] = mapAgreement(corrected.State.NodeStates, ref.NodeStates)
+			}
+		}
 	}
 	return features, nil
+}
+
+// FinalFeatures returns only the final model-generated state of an episode.
+// It is the topology study's static endpoint baseline: same task and context,
+// but no intermediate transition geometry or operator summaries.
+func (t Trajectory) FinalFeatures() (FeatureVector, error) {
+	full, err := t.Features(false)
+	if err != nil {
+		return nil, err
+	}
+	last := -1
+	for i := len(t.Observations) - 1; i >= 0; i-- {
+		if !t.Observations[i].Seeded {
+			last = i
+			break
+		}
+	}
+	if last < 0 {
+		return nil, fmt.Errorf("episode %s has no model-generated state", t.Episode.ID)
+	}
+	prefix := t.Episode.Family + "." + t.Episode.Steps[last].Role + "."
+	result := FeatureVector{}
+	for key, value := range full {
+		if strings.HasPrefix(key, prefix) {
+			result[key] = value
+		}
+	}
+	if len(result) == 0 {
+		return nil, fmt.Errorf("episode %s produced no final-state features", t.Episode.ID)
+	}
+	return result, nil
 }
 
 // Distance computes mean normalized absolute distance over an identical feature
@@ -170,8 +236,11 @@ func Distance(a, b FeatureVector) float64 {
 			return math.Inf(1)
 		}
 		delta := math.Abs(av - bv)
-		if strings.Contains(key, "residual") || strings.HasSuffix(key, ".discount") {
-			delta /= 2 // signed features span [-1,1]; normalize pairwise range to [0,1]
+		switch {
+		case strings.HasSuffix(key, ".discount_residual"):
+			delta /= 4 // residual of two [-1,1] discounts spans [-2,2]
+		case strings.Contains(key, "residual") || strings.HasSuffix(key, ".discount") || strings.HasSuffix(key, ".asymmetry"):
+			delta /= 2 // signed feature spans [-1,1]
 		}
 		total += delta
 	}

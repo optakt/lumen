@@ -1,0 +1,34 @@
+episode cascade-mesh-s2
+  family: retraction-cascade
+  variant: s2
+  topology: mesh
+  claim: "Focal belief x0313b4 remains operationally supported."
+  world: "The derivation graph is x0313b1-\u003ex0313b3, x0313b2-\u003ex0313b3, x0313b2-\u003ex0313b4, x0313b3-\u003ex0313b4, x0313r0-\u003ex0313b1, x0313r1-\u003ex0313b2, x0313r1-\u003ex0313u1. Retraction propagates only forward through derivation edges. Every reachable dependent becomes suspect, not false, when an ancestor record is retracted. The unrelated node x0313u1 must remain active. Any other belief with no path from the retracted source also remains active, even if it shares descendants with a suspect path."
+  prior: [0.740000, 0.860000]
+  step graph-loaded
+    role: graph-loaded
+    intervention: "All records and beliefs in the declared graph are valid and active. Report the focal belief and all belief-node states."
+    belief: [0.740000, 0.860000]
+    state: active
+    accepted_support: ["x0313r0","x0313r1"]
+    rejected_support: []
+    node_states: {"x0313b1":"active","x0313b2":"active","x0313b3":"active","x0313b4":"active","x0313u1":"active"}
+    action: hold
+  step root-retracted
+    role: retracted
+    intervention: "Record x0313r0 is retracted after its file is found corrupted. Apply the complete causal cascade. Do not equate suspect with false."
+    belief: [0.740000, 0.860000]
+    state: suspect
+    accepted_support: ["x0313r1"]
+    rejected_support: ["x0313r0"]
+    node_states: {"x0313b1":"suspect","x0313b2":"active","x0313b3":"suspect","x0313b4":"suspect","x0313u1":"active"}
+    action: contract
+  step unrelated-noise
+    role: isolation
+    intervention: "A new record x0313N concerns an unrelated object and has no derivation edge to any named belief. Preserve the cascade state."
+    belief: [0.740000, 0.860000]
+    state: suspect
+    accepted_support: ["x0313r1"]
+    rejected_support: ["x0313r0"]
+    node_states: {"x0313b1":"suspect","x0313b2":"active","x0313b3":"suspect","x0313b4":"suspect","x0313u1":"active"}
+    action: hold

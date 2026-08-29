@@ -1,0 +1,4 @@
+Pilot 1 static baselines (leave-one-run-out; separate acquisition)
+  opinion/confidence       23/24 = 95.83% skipped=0
+  hashed response texture  24/24 = 100.00% skipped=0
+

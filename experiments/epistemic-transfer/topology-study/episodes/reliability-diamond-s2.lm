@@ -1,0 +1,43 @@
+episode reliability-diamond-s2
+  family: source-reliability-reversal
+  variant: s2
+  topology: diamond
+  claim: "Synthetic classifier X0235 is reliable."
+  world: "Sources x0235s1, x0235s2, x0235s3, x0235s4 form the directed reliability graph x0235s1-\u003ex0235s2, x0235s1-\u003ex0235s3, x0235s2-\u003ex0235s4, x0235s3-\u003ex0235s4. Local confidence at a source is propagated in topological order: effective_confidence(child)=min(local_confidence(child), every parent effective confidence). Source confidence weights LR toward 1 via effective LR=1+c*(LR-1), then contributions add in log-odds space. Likelihood ratios are fixed: x0235s1=[2.0,2.4], x0235s2=[1.7,2.1], x0235s3=[0.65,0.85], x0235s4=[1.3,1.6]. Initial local confidences are [0.90,0.75,0.60,0.45], yielding effective confidences [0.90,0.75,0.60,0.45]."
+  prior: [0.380000, 0.580000]
+  step prior
+    role: prior
+    intervention: "No evidence has been observed. Use the declared prior."
+    belief: [0.380000, 0.580000]
+    state: active
+    accepted_support: []
+    rejected_support: []
+    node_states: {}
+    action: hold
+  step reports
+    role: reports
+    intervention: "Observe all four reports using the initial source confidences."
+    belief: [0.614249, 0.868118]
+    state: active
+    accepted_support: ["x0235s1","x0235s2","x0235s3","x0235s4"]
+    rejected_support: []
+    node_states: {}
+    action: revise
+  step downgrade
+    role: downgrade
+    intervention: "A reliability audit changes only local confidence of x0235s2 from 0.75 to 0.25. Propagate through the declared graph, then recompute from the prior."
+    belief: [0.537473, 0.806361]
+    state: active
+    accepted_support: ["x0235s1","x0235s2","x0235s3","x0235s4"]
+    rejected_support: []
+    node_states: {}
+    action: revise
+  step reversal
+    role: reversal
+    intervention: "Restore local confidence of x0235s2 to 0.75 and validate x0235s3 by raising its local confidence from 0.60 to 0.95. Propagate through the declared graph, then recompute from the prior."
+    belief: [0.579957, 0.862203]
+    state: active
+    accepted_support: ["x0235s1","x0235s2","x0235s3","x0235s4"]
+    rejected_support: []
+    node_states: {}
+    action: revise

@@ -1,0 +1,34 @@
+episode cascade-chain-s1
+  family: retraction-cascade
+  variant: s1
+  topology: chain
+  claim: "Focal belief x0012b4 remains operationally supported."
+  world: "The derivation graph is x0012b1-\u003ex0012b2, x0012b2-\u003ex0012b3, x0012b3-\u003ex0012b4, x0012r0-\u003ex0012b1, x0012r1-\u003ex0012u1. Retraction propagates only forward through derivation edges. Every reachable dependent becomes suspect, not false, when an ancestor record is retracted. The unrelated node x0012u1 must remain active. Any other belief with no path from the retracted source also remains active, even if it shares descendants with a suspect path."
+  prior: [0.740000, 0.860000]
+  step graph-loaded
+    role: graph-loaded
+    intervention: "All records and beliefs in the declared graph are valid and active. Report the focal belief and all belief-node states."
+    belief: [0.740000, 0.860000]
+    state: active
+    accepted_support: ["x0012r0","x0012r1"]
+    rejected_support: []
+    node_states: {"x0012b1":"active","x0012b2":"active","x0012b3":"active","x0012b4":"active","x0012u1":"active"}
+    action: hold
+  step root-retracted
+    role: retracted
+    intervention: "Record x0012r0 is retracted after its file is found corrupted. Apply the complete causal cascade. Do not equate suspect with false."
+    belief: [0.740000, 0.860000]
+    state: suspect
+    accepted_support: ["x0012r1"]
+    rejected_support: ["x0012r0"]
+    node_states: {"x0012b1":"suspect","x0012b2":"suspect","x0012b3":"suspect","x0012b4":"suspect","x0012u1":"active"}
+    action: contract
+  step unrelated-noise
+    role: isolation
+    intervention: "A new record x0012N concerns an unrelated object and has no derivation edge to any named belief. Preserve the cascade state."
+    belief: [0.740000, 0.860000]
+    state: suspect
+    accepted_support: ["x0012r1"]
+    rejected_support: ["x0012r0"]
+    node_states: {"x0012b1":"suspect","x0012b2":"suspect","x0012b3":"suspect","x0012b4":"suspect","x0012u1":"active"}
+    action: hold
