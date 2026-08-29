@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/optakt/lumen/transfer"
@@ -46,6 +47,44 @@ func TestCalibrationThresholdUsesOnlyTrainingTopologies(t *testing.T) {
 	threshold := calibrationThreshold(vectors, models, "mesh")
 	if threshold < 0 || threshold > 1e-9 {
 		t.Fatalf("threshold = %f", threshold)
+	}
+}
+
+func TestExactMcNemar(t *testing.T) {
+	if got := exactMcNemar(0, 0); got != 1 {
+		t.Fatalf("zero discordance p=%f", got)
+	}
+	if got := exactMcNemar(5, 0); math.Abs(got-0.0625) > 1e-12 {
+		t.Fatalf("p=%f", got)
+	}
+}
+
+func TestMedian(t *testing.T) {
+	if got := median([]float64{3, 1, 2}); got != 2 {
+		t.Fatalf("median = %f", got)
+	}
+	if got := median([]float64{4, 1, 3, 2}); got != 2.5 {
+		t.Fatalf("median even = %f", got)
+	}
+}
+
+func TestDistanceAUROC(t *testing.T) {
+	got := distanceAUROC([]float64{0.1, 0.2}, []float64{0.8, 0.9})
+	if got != 1 {
+		t.Fatalf("AUROC = %f", got)
+	}
+	got = distanceAUROC([]float64{0.5}, []float64{0.5})
+	if got != 0.5 {
+		t.Fatalf("tie AUROC = %f", got)
+	}
+}
+
+func TestOperatorFilterExcludesPerStepFamilyFeatures(t *testing.T) {
+	if isOperatorFeature("source-reliability-reversal.reports.mid") {
+		t.Fatal("per-step reliability feature leaked into operator summary")
+	}
+	if !isOperatorFeature("source-reliability-reversal.downgrade_delta") {
+		t.Fatal("operator summary was excluded")
 	}
 }
 

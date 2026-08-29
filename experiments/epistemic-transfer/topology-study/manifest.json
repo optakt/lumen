@@ -1,0 +1,93 @@
+{
+  "experiment": "topology-held-out-epistemic-system-identification-v1",
+  "seed": 113,
+  "runs_per_model_episode": 2,
+  "known_models": [
+    "claude-opus-4-6",
+    "claude-sonnet-4-6",
+    "gpt-5.6-sol",
+    "grok-4.6",
+    "deepseek-v4-pro",
+    "kimi-k3",
+    "glm-5.3",
+    "gemini-3.7-flash"
+  ],
+  "open_set_models": [
+    "claude-haiku-4-5"
+  ],
+  "excluded_models": {
+    "qwen3.8-max": "weekly token-plan quota exhausted; 3 complete final-protocol trajectories retained",
+    "fable-5": "credits unavailable"
+  },
+  "topologies": [
+    "chain",
+    "fork",
+    "diamond",
+    "mesh"
+  ],
+  "families": [
+    "correlation-disclosure",
+    "retraction-cascade",
+    "retrodictive-validity",
+    "source-reliability-reversal",
+    "recovery-hysteresis"
+  ],
+  "surface_variants": [
+    "s1",
+    "s2"
+  ],
+  "complete_trajectories": 720,
+  "model_generated_transitions": 2160,
+  "canonical_seed_states": 720,
+  "episode_hashes": {
+    "cascade-chain-s1.lm": "9010768b035c300ebd3818efe72f91332a4b8b4d025dc03b7a58e19a1f308b44",
+    "cascade-chain-s2.lm": "544e9901ae346122128c29c7f8e688d23744b348540fe6fc0823ff12e05e869b",
+    "cascade-diamond-s1.lm": "0b66148e1c6dd533a2d695c3b21c4f5cf0940396912863e1f829d19885b70928",
+    "cascade-diamond-s2.lm": "5693fc28f45b8b6795a4445a057d1fd087b70e7ebcdf9b189c63396bab952cba",
+    "cascade-fork-s1.lm": "8d1444341e586f9a98e5fa954cee6bfa9f9b5c13d5fbbf0d6f4aee30f3196721",
+    "cascade-fork-s2.lm": "e33f5145aeac723db905d100946073eb97b9c469ec90f87efd344d8024e82410",
+    "cascade-mesh-s1.lm": "e626ec48b9899fae98c122917bc81d0c9ab3359d10dc8c50105dee37cea87c35",
+    "cascade-mesh-s2.lm": "8681487a575547eef3a22d709d5a99843ba618e76a3530205297870348a130c7",
+    "correlation-chain-s1.lm": "cdec46a92b5c2f236694cdd56aad8bc25785d2e0e8617cc1ebed86f7aed1259a",
+    "correlation-chain-s2.lm": "3b93baf5ba68f6d9a527ceace69c1ef5524212882713ad38acb57131379a1dc9",
+    "correlation-diamond-s1.lm": "fc9cc5e187b27328f43d1728c964aeacb161425a75aae716c4df34eee99c2d0e",
+    "correlation-diamond-s2.lm": "284f654f60101a7350fe2dc37eb8f79ca18b134d1bee236936f9ed8ae1418568",
+    "correlation-fork-s1.lm": "2ea4cab1854fb82417bbc0fccb1405e84ec92ad62b5f751b2ef50e779e2385fb",
+    "correlation-fork-s2.lm": "2886190ec6e57dbc2e90412e2fdcdaac1e6b11a7eb449b293a9a321a097d915e",
+    "correlation-mesh-s1.lm": "bded21fda3618a8c5a867173d6915b274f5903671c59d92c81baff16a135f1b4",
+    "correlation-mesh-s2.lm": "a71de3704ba93ce48bed698e8186a4f26bbb0192896000f10bf1bcb3f5f35475",
+    "recovery-chain-s1.lm": "6ffab7a96a7b2f93b2d2ce8f4c41331d90d6a332315302b87e493e4493b96a87",
+    "recovery-chain-s2.lm": "d8820965148a4e1e1c9a4fcbc7250108d86b572d4634383947ee1a92fd978f9b",
+    "recovery-diamond-s1.lm": "42b67904ebde5bd2f37a4e25c5cac684cd546b7efe65906e9a399c0731bed5d6",
+    "recovery-diamond-s2.lm": "dd5a25ddf2c2608db559d402a21ccfe69051e656ede8da60a1e6dd8e8eee00aa",
+    "recovery-fork-s1.lm": "8b8284d1510e9686c20c3db3f7a24d3d9c6c15e7e46afb75cc7e051696f241c3",
+    "recovery-fork-s2.lm": "bdbcfaa266e893f8d1011a62127ae5a3686c93daf55bc63ea9bab1a939048836",
+    "recovery-mesh-s1.lm": "63a95a77f61b3c35c4c4239687e058a3333c227e3d65046d622f89b433bd7a63",
+    "recovery-mesh-s2.lm": "52b75f01fb857bd6bfa57475ac906af739fad928451ea0c53cbb6c6715cbda6d",
+    "reliability-chain-s1.lm": "91cc2d9bdf1fee864fd83341be0d7ef7a3897301c0fb177a0975d3ee3dade097",
+    "reliability-chain-s2.lm": "8796d65327e88cd8947c42e517634184ae6dfdcdbc021b8ff5e5556e97638869",
+    "reliability-diamond-s1.lm": "5fd218c7d6be6890bae4cbfa3b21f7ef73f599ca251eda325de624784cbdaf01",
+    "reliability-diamond-s2.lm": "235e1b29d41e38437588d1b43c5337292ec81510da5be1c311b39932ce3a531c",
+    "reliability-fork-s1.lm": "8e41ba2605466e6f3f67462665c55a331efff8502ee6609c5c07ef2eec5a322b",
+    "reliability-fork-s2.lm": "713875543a101156bb4ea43add65fecada742e5c34cb9ed310a7fd508ba56ef6",
+    "reliability-mesh-s1.lm": "189ab081a517ee613fc5925a148cd4290d13735656a44404e7870d8adc7c5930",
+    "reliability-mesh-s2.lm": "396675868d241c0fc978cd3f6337a81c5e1e328242ad0fd4ef582425f5c57822",
+    "retrodiction-chain-s1.lm": "1b0ac6aa8f5378d5fe966fd8748614da27dc883e85d413a589db2e2fdb34657c",
+    "retrodiction-chain-s2.lm": "b4769f25fa68319f6a18ad390ccfd4aac57ec0d6757f447e8165cc91c8ee8c81",
+    "retrodiction-diamond-s1.lm": "e1c88a13c362b30d184c9bd86b63363b57e2e775851792e7d25328df611efed9",
+    "retrodiction-diamond-s2.lm": "0d9ab255f8ad2e4b9006f4c7f534280960d99c0fbeee7161ba99543b7936ecff",
+    "retrodiction-fork-s1.lm": "942d9dde2a7f0f315d3ba703d1088c03251667895d2dfbd4b395d3810f3ad04b",
+    "retrodiction-fork-s2.lm": "7f8700d97aa357de2101b7e8962552ecfeb6968a2fa5ba43e1adfc33f682cca5",
+    "retrodiction-mesh-s1.lm": "91663209c68f4f53f9693570c6f4e55fe325ee1a71afdd4c5386f950b2736c28",
+    "retrodiction-mesh-s2.lm": "c9140bc4bd9badaa1a898eed7f23d3d4dfa50ed98a983007c21a0400c15b2ee6"
+  },
+  "providers_sha256": "fd1177cc5da325e53bb0fc56abafdea197c0595a4a4f1d0b209b947e50a08726",
+  "results_sha256": "acd6ae26f6e9fa05fff32a76c46dad64c1e238abe61f58c3f3ffe9c67031bc8d",
+  "qwen_excluded_sha256": "e7cca2b5cd7f8bca1147b37c694390408318fc44f35ac854c0242b2fcfbf6ccc",
+  "analysis_sha256": "a7e780888d92c2beea519b3d7c4e6c185610c0662c6f88da08c59ef5c835caac",
+  "static_analysis_sha256": "bd9114ac2396a08ff3bdd388916f7993a3abb64faeb8a28a3e3c53562a5c69b3",
+  "results_report_sha256": "8d9c823c64e91c000783f996f0dd73133d20d9158bc72ac6fc232376a2cbddb8",
+  "independent_review_sha256": "fc42c23844575006485a693ee3dddd565c048c69d2c653dfb89036dd01907e4a",
+  "analysis_parser": "transfer-state-v3",
+  "decision": "strong fingerprinting claim falsified: full trajectory 76.56% vs held-out final texture 75.00%, McNemar p=0.8804; open-set Haiku rejection 0%"
+}

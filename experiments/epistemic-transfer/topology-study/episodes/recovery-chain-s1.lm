@@ -3,7 +3,7 @@ episode recovery-chain-s1
   variant: s1
   topology: chain
   claim: "Recovered focal belief x0045b4 remains supported."
-  world: "The derivation graph is x0045b1-\u003ex0045b2, x0045b2-\u003ex0045b3, x0045b3-\u003ex0045b4, x0045r0-\u003ex0045b1, x0045r1-\u003ex0045u1. Record x0045r0 supports the focal path and x0045r1 is independent. If x0045r0 is retracted, every reachable dependent becomes suspect. A corrected record x0045r0c may later replace x0045r0 with formally equivalent support; recovery then restores the same graph positions and confidence rather than creating a new belief."
+  world: "The derivation graph is x0045b1-\u003ex0045b2, x0045b2-\u003ex0045b3, x0045b3-\u003ex0045b4, x0045r0-\u003ex0045b1, x0045r1-\u003ex0045u1. Record x0045r0 supports the focal path and x0045r1 is independent. If a record is retracted, every reachable dependent becomes suspect. No corrected replacement is currently available; future interventions are not known in advance."
   prior: [0.720000, 0.840000]
   step graph-loaded
     role: graph-loaded
@@ -25,7 +25,7 @@ episode recovery-chain-s1
     action: contract
   step corrected
     role: corrected
-    intervention: "Introduce corrected record x0045r0c. It has formally equivalent evidential strength and replaces x0045r0 at the same derivation positions."
+    intervention: "Introduce corrected record x0045r0c. It has formally equivalent evidential strength and replaces x0045r0 at the same derivation positions. Under the declared recovery semantics, restoration reactivates reachable beliefs and restores the prior confidence rather than creating a new belief."
     belief: [0.720000, 0.840000]
     state: active
     accepted_support: ["x0045r0c","x0045r1"]

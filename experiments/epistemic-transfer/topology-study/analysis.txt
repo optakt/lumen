@@ -1,0 +1,151 @@
+TOPOLOGY-HELD-OUT EPISTEMIC SYSTEM IDENTIFICATION
+================================================================
+Known models: 8 | Open-set models: 1 | Complete trajectories: 720
+Topologies: chain, fork, diamond, mesh
+
+final-state endpoint baseline
+  hold out chain     21/32   65.62% skipped=0
+  hold out fork      21/32   65.62% skipped=0
+  hold out diamond   25/32   78.12% skipped=0
+  hold out mesh      20/32   62.50% skipped=0
+  aggregate          87/128  67.97% skipped=0
+  confusion (rows actual, columns predicted):
+       co46 cs46  dvp g37f  g53 g56s  g46   kk
+  co46   12    4    0    0    0    0    0    0
+  cs46    3   13    0    0    0    0    0    0
+   dvp    0    0   13    1    0    0    2    0
+  g37f    0    0    0   14    0    0    2    0
+   g53    0    0    0    4    7    0    5    0
+  g56s    0    0    0    2    0   10    4    0
+   g46    0    0    0    2    0    1   13    0
+    kk    0    0    0    1    4    3    3    5
+
+final-state hashed texture baseline
+  hold out chain     25/32   78.12% skipped=0
+  hold out fork      22/32   68.75% skipped=0
+  hold out diamond   25/32   78.12% skipped=0
+  hold out mesh      24/32   75.00% skipped=0
+  aggregate          96/128  75.00% skipped=0
+  confusion (rows actual, columns predicted):
+       co46 cs46  dvp g37f  g53 g56s  g46   kk
+  co46   14    2    0    0    0    0    0    0
+  cs46    0   16    0    0    0    0    0    0
+   dvp    0    0    6    0    5    0    5    0
+  g37f    0    0    0   10    4    0    2    0
+   g53    0    0    0    0   16    0    0    0
+  g56s    0    0    0    0    0   13    3    0
+   g46    0    0    0    0    0    0   16    0
+    kk    0    0    0    0   11    0    0    5
+
+probability trajectory baseline
+  hold out chain     21/32   65.62% skipped=0
+  hold out fork      20/32   62.50% skipped=0
+  hold out diamond   24/32   75.00% skipped=0
+  hold out mesh      18/32   56.25% skipped=0
+  aggregate          83/128  64.84% skipped=0
+  confusion (rows actual, columns predicted):
+       co46 cs46  dvp g37f  g53 g56s  g46   kk
+  co46   12    0    0    0    4    0    0    0
+  cs46    1   11    0    0    4    0    0    0
+   dvp    0    0   14    0    0    0    0    2
+  g37f    0    2    0   13    0    0    1    0
+   g53    5    1    0    0    8    2    0    0
+  g56s    2    0    0    3    0    5    6    0
+   g46    0    1    0    2    0    6    7    0
+    kk    0    0    1    1    0    1    0   13
+
+graph/state trajectory baseline
+  hold out chain     18/32   56.25% skipped=1
+  hold out fork      22/32   68.75% skipped=1
+  hold out diamond   21/32   65.62% skipped=0
+  hold out mesh      14/32   43.75% skipped=0
+  aggregate          75/128  58.59% skipped=2
+  confusion (rows actual, columns predicted):
+       co46 cs46  dvp g37f  g53 g56s  g46   kk
+  co46    7    9    0    0    0    0    0    0
+  cs46    0   13    0    1    0    2    0    0
+   dvp    1    1   11    0    0    0    3    0
+  g37f    0    0    0   14    0    2    0    0
+   g53    0    2    0    7    1    2    3    0
+  g56s    1    0    0    4    0   10    0    0
+   g46    1    0    0    3    0    0   12    0
+    kk    0    0    0    6    0    1    2    7
+
+operator summaries
+  hold out chain      7/32   21.88% skipped=0
+  hold out fork      10/32   31.25% skipped=0
+  hold out diamond   11/32   34.38% skipped=0
+  hold out mesh       9/32   28.12% skipped=0
+  aggregate          37/128  28.91% skipped=0
+  confusion (rows actual, columns predicted):
+       co46 cs46  dvp g37f  g53 g56s  g46   kk
+  co46    6    2    0    4    2    2    0    0
+  cs46    3    3    0    7    0    3    0    0
+   dvp    1    0    8    0    2    0    0    5
+  g37f    0    8    0    4    0    4    0    0
+   g53    6    0    0    1    4    1    3    1
+  g56s    0    8    0    4    0    4    0    0
+   g46    0    8    0    4    0    4    0    0
+    kk    3    0    3    0    2    0    0    8
+
+full Lumen graph-operator signature
+  hold out chain     21/32   65.62% skipped=0
+  hold out fork      27/32   84.38% skipped=0
+  hold out diamond   28/32   87.50% skipped=0
+  hold out mesh      22/32   68.75% skipped=0
+  aggregate          98/128  76.56% skipped=0
+  confusion (rows actual, columns predicted):
+       co46 cs46  dvp g37f  g53 g56s  g46   kk
+  co46   14    2    0    0    0    0    0    0
+  cs46    1   15    0    0    0    0    0    0
+   dvp    0    0   15    0    0    0    1    0
+  g37f    0    0    0   15    0    0    1    0
+   g53    0    0    0    4    3    3    6    0
+  g56s    0    0    0    3    0   10    3    0
+   g46    0    0    0    1    0    0   15    0
+    kk    0    0    0    2    0    1    2   11
+
+paired comparison with full signature
+  final structured   full-only=17 baseline-only= 6 McNemar exact p=0.0347
+  final texture      full-only=23 baseline-only=21 McNemar exact p=0.8804
+  graph/state        full-only=28 baseline-only= 5 McNemar exact p=0.0001
+  operators          full-only=68 baseline-only= 7 McNemar exact p=0.0000
+  probability        full-only=30 baseline-only=15 McNemar exact p=0.0357
+
+full trajectory by intervention family
+  correlation-disclosure          60/128  46.88% skipped=0
+  retraction-cascade              58/128  45.31% skipped=0
+  retrodictive-validity           54/128  42.19% skipped=0
+  source-reliability-reversal     60/128  46.88% skipped=3
+  recovery-hysteresis             58/128  45.31% skipped=0
+
+distance separation
+  within-model median:  0.027973 (n=960)
+  between-model median: 0.066051 (n=448)
+  pairwise AUROC (between > within): 0.8421
+
+leave-one-model-out rejection
+  claude-opus-4-6          0/16 = 0.00% rejected
+  claude-sonnet-4-6        1/16 = 6.25% rejected
+  deepseek-v4-pro          16/16 = 100.00% rejected
+  gemini-3.7-flash         0/16 = 0.00% rejected
+  glm-5.3                  3/16 = 18.75% rejected
+  gpt-5.6-sol              0/16 = 0.00% rejected
+  grok-4.6                 0/16 = 0.00% rejected
+  kimi-k3                  4/16 = 25.00% rejected
+  macro total              24/128 = 18.75% rejected
+
+open-set rejection
+  hold out chain    threshold=0.05428
+  hold out fork     threshold=0.05306
+  hold out diamond  threshold=0.05321
+  hold out mesh     threshold=0.05582
+  known acceptance: 119/128 = 92.97%
+  unknown rejection: 0/16 = 0.00%
+
+  distance AUROC (unknown > known): 0.7612
+
+Pilot 1 static baselines (leave-one-run-out; separate acquisition)
+  opinion/confidence       23/24 = 95.83% skipped=0
+  hashed response texture  24/24 = 100.00% skipped=0
+

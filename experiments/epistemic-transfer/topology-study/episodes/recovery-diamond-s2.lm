@@ -3,7 +3,7 @@ episode recovery-diamond-s2
   variant: s2
   topology: diamond
   claim: "Recovered focal belief x0246b4 remains supported."
-  world: "The derivation graph is x0246b1-\u003ex0246b3, x0246b2-\u003ex0246b3, x0246b3-\u003ex0246b4, x0246r0-\u003ex0246b1, x0246r0-\u003ex0246b2, x0246r1-\u003ex0246u1. Record x0246r0 supports the focal path and x0246r1 is independent. If x0246r0 is retracted, every reachable dependent becomes suspect. A corrected record x0246r0c may later replace x0246r0 with formally equivalent support; recovery then restores the same graph positions and confidence rather than creating a new belief."
+  world: "The derivation graph is x0246b1-\u003ex0246b3, x0246b2-\u003ex0246b3, x0246b3-\u003ex0246b4, x0246r0-\u003ex0246b1, x0246r0-\u003ex0246b2, x0246r1-\u003ex0246u1. Record x0246r0 supports the focal path and x0246r1 is independent. If a record is retracted, every reachable dependent becomes suspect. No corrected replacement is currently available; future interventions are not known in advance."
   prior: [0.720000, 0.840000]
   step graph-loaded
     role: graph-loaded
@@ -25,7 +25,7 @@ episode recovery-diamond-s2
     action: contract
   step corrected
     role: corrected
-    intervention: "Introduce corrected record x0246r0c. It has formally equivalent evidential strength and replaces x0246r0 at the same derivation positions."
+    intervention: "Introduce corrected record x0246r0c. It has formally equivalent evidential strength and replaces x0246r0 at the same derivation positions. Under the declared recovery semantics, restoration reactivates reachable beliefs and restores the prior confidence rather than creating a new belief."
     belief: [0.720000, 0.840000]
     state: active
     accepted_support: ["x0246r0c","x0246r1"]

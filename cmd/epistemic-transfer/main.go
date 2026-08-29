@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -99,7 +100,7 @@ func main() {
 }
 
 func runAll(providers []modelapi.Provider, episodes []*transfer.Episode, runs int, seed uint64, resultsPath string) error {
-	completed, err := completedRuns(resultsPath, episodes)
+	completed, err := completedRuns(resultsPath, episodes, providers)
 	if err != nil {
 		return err
 	}
@@ -116,6 +117,10 @@ func runAll(providers []modelapi.Provider, episodes []*transfer.Episode, runs in
 	var errMu sync.Mutex
 
 	for providerIndex, provider := range providers {
+		if provider.StudyRole == "excluded" || provider.StudyRole == "excluded-quota" {
+			log.Printf("SKIP %s: study role %s", provider.Name, provider.StudyRole)
+			continue
+		}
 		apiKey := os.Getenv(provider.APIKey)
 		if apiKey == "" {
 			log.Printf("SKIP %s: %s is not set", provider.Name, provider.APIKey)
@@ -245,7 +250,15 @@ func runEpisode(client *modelapi.Client, provider modelapi.Provider, apiKey stri
 			}
 			lastErr = err
 			if attempt < 3 {
-				time.Sleep(time.Duration(attempt) * time.Second)
+				delay := time.Duration(attempt) * time.Second
+				var httpErr *modelapi.HTTPError
+				if errors.As(err, &httpErr) && httpErr.StatusCode == 429 {
+					delay = time.Duration(attempt*10) * time.Second
+					if httpErr.RetryAfter > delay {
+						delay = httpErr.RetryAfter
+					}
+				}
+				time.Sleep(delay)
 			}
 		}
 		if lastErr != nil {
@@ -586,7 +599,7 @@ func loadProviders(path string) ([]modelapi.Provider, error) {
 	return providers, nil
 }
 
-func completedRuns(path string, episodes []*transfer.Episode) (map[string]bool, error) {
+func completedRuns(path string, episodes []*transfer.Episode, providers []modelapi.Provider) (map[string]bool, error) {
 	completed := map[string]bool{}
 	results, err := loadResults(path)
 	if os.IsNotExist(err) {
@@ -596,11 +609,17 @@ func completedRuns(path string, episodes []*transfer.Episode) (map[string]bool, 
 		return nil, err
 	}
 	expected := map[string]int{}
+	hashes := map[string]string{}
 	for _, episode := range episodes {
 		expected[episode.ID] = len(episode.Steps)
+		hashes[episode.ID] = episode.Hash
+	}
+	providerFingerprints := map[string]string{}
+	for _, provider := range providers {
+		providerFingerprints[provider.Name] = provider.ResponseFingerprint()
 	}
 	for _, result := range results {
-		if resultIsComplete(result, expected[result.Episode]) {
+		if result.EpisodeHash == hashes[result.Episode] && result.Provider.ResponseFingerprint() == providerFingerprints[result.Model] && resultIsComplete(result, expected[result.Episode]) {
 			completed[runKey(result.Model, result.Episode, result.Run)] = true
 		}
 	}

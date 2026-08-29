@@ -69,7 +69,7 @@ func buildCorrelationStudy(topology, variant string, topologyIndex, salt int) (E
 		return Episode{}, err
 	}
 	ids := evidenceIDs(evidence)
-	world := fmt.Sprintf("Only sources %s bear on the focal claim. The prior is updated in log-odds space. For source i, effective LR endpoint = 1 + confidence_i*(LR_i-1). Before correlation disclosure, source weight is 1. After disclosure, weight_i=max(0.1,1-sum_j(r_ij)/2), and weighted log effective LRs are added to prior log odds. Evidence: %s. Correlation graph on disclosure: %s.", strings.Join(ids, ", "), renderEvidence(evidence), renderCorrelationEdges(edges))
+	world := fmt.Sprintf("Only sources %s bear on the focal claim. The prior is updated in log-odds space. For source i, effective LR endpoint = 1 + confidence_i*(LR_i-1). Before correlation disclosure, source weight is 1. After disclosure, weight_i=max(0.1,1-sum_j(r_ij)/2), and weighted log effective LRs are added to prior log odds. Evidence: %s. No correlation structure is available until an audit explicitly discloses it.", strings.Join(ids, ", "), renderEvidence(evidence))
 	claim := fmt.Sprintf("Process %s stabilizes synthetic material %s.", strings.ToUpper(prefix), strings.ToUpper(prefix)+"X")
 	e := Episode{
 		ID: fmt.Sprintf("correlation-%s-%s", topology, variant), Family: "correlation-disclosure", Variant: variant, Topology: topology,
@@ -136,7 +136,7 @@ func buildRetrodictionStudy(topology, variant string, topologyIndex, salt int) (
 	historical := afterTwo
 	firstIDs := evidenceIDs(evidence[:2])
 	secondIDs := evidenceIDs(evidence[2:])
-	world := fmt.Sprintf("At time 0 the prior applies. At time 10 sources %s arrive; at time 20 sources %s arrive. Use the declared log-odds update rule with evidence %s. The correlation graph is %s and uses weight_i=max(0.1,1-sum_j(r_ij)/2). At time 30, the time-10 sources are retracted and current confidence is re-evaluated from surviving support. Retraction changes current support but never rewrites what was justified at time 20.", strings.Join(firstIDs, ", "), strings.Join(secondIDs, ", "), renderEvidence(evidence), renderCorrelationEdges(correlations))
+	world := fmt.Sprintf("At time 0 the prior applies. Sources may arrive over time. Use the declared log-odds update rule with evidence %s. The correlation graph is %s and uses weight_i=max(0.1,1-sum_j(r_ij)/2). Historical validity is evaluated from information available at the queried time; later events are not known in advance.", renderEvidence(evidence), renderCorrelationEdges(correlations))
 	e := Episode{
 		ID: fmt.Sprintf("retrodiction-%s-%s", topology, variant), Family: "retrodictive-validity", Variant: variant, Topology: topology,
 		Claim: fmt.Sprintf("Synthetic system %s was in state K at time 20.", strings.ToUpper(prefix)), World: world, Prior: prior,
@@ -210,14 +210,14 @@ func buildRecoveryStudy(topology, variant string, topologyIndex, salt int) (Epis
 		suspectNodes[node] = "suspect"
 	}
 	baseline := Interval{0.72, 0.84}
-	world := fmt.Sprintf("The derivation graph is %s. Record %s supports the focal path and %s is independent. If %s is retracted, every reachable dependent becomes suspect. A corrected record %s may later replace %s with formally equivalent support; recovery then restores the same graph positions and confidence rather than creating a new belief.", renderDirectedEdges(edges), source, independent, source, replacement, source)
+	world := fmt.Sprintf("The derivation graph is %s. Record %s supports the focal path and %s is independent. If a record is retracted, every reachable dependent becomes suspect. No corrected replacement is currently available; future interventions are not known in advance.", renderDirectedEdges(edges), source, independent)
 	e := Episode{
 		ID: fmt.Sprintf("recovery-%s-%s", topology, variant), Family: "recovery-hysteresis", Variant: variant, Topology: topology,
 		Claim: fmt.Sprintf("Recovered focal belief %s remains supported.", nodes[3]), World: world, Prior: baseline,
 		Steps: []Step{
 			{ID: "graph-loaded", Role: "graph-loaded", Intervention: "All records and beliefs are valid and active. Report the focal belief and all belief-node states.", Reference: State{Belief: baseline, Status: "active", AcceptedSupport: []string{source, independent}, RejectedSupport: []string{}, NodeStates: activeNodes, Action: "hold"}},
 			{ID: "retracted", Role: "retracted", Intervention: fmt.Sprintf("Retract %s after corruption is found. Apply the causal cascade.", source), Reference: State{Belief: baseline, Status: "suspect", AcceptedSupport: []string{independent}, RejectedSupport: []string{source}, NodeStates: suspectNodes, Action: "contract"}},
-			{ID: "corrected", Role: "corrected", Intervention: fmt.Sprintf("Introduce corrected record %s. It has formally equivalent evidential strength and replaces %s at the same derivation positions.", replacement, source), Reference: State{Belief: baseline, Status: "active", AcceptedSupport: []string{replacement, independent}, RejectedSupport: []string{source}, NodeStates: activeNodes, Action: "recover"}},
+			{ID: "corrected", Role: "corrected", Intervention: fmt.Sprintf("Introduce corrected record %s. It has formally equivalent evidential strength and replaces %s at the same derivation positions. Under the declared recovery semantics, restoration reactivates reachable beliefs and restores the prior confidence rather than creating a new belief.", replacement, source), Reference: State{Belief: baseline, Status: "active", AcceptedSupport: []string{replacement, independent}, RejectedSupport: []string{source}, NodeStates: activeNodes, Action: "recover"}},
 			{ID: "stability", Role: "stability", Intervention: "No further evidence arrives. Report whether any residual suspicion or confidence hysteresis remains under the declared recovery semantics.", Reference: State{Belief: baseline, Status: "active", AcceptedSupport: []string{replacement, independent}, RejectedSupport: []string{source}, NodeStates: activeNodes, Action: "hold"}},
 		},
 	}
@@ -276,16 +276,16 @@ func correlationTopology(topology string, evidence []studyEvidence) []correlatio
 	id := func(i int) string { return evidence[i].ID }
 	switch topology {
 	case "chain":
-		return []correlationEdge{{id(0), id(1), .70}, {id(1), id(2), .60}, {id(2), id(3), .50}}
+		return []correlationEdge{{id(0), id(1), .60}, {id(1), id(2), .60}, {id(2), id(3), .60}}
 	case "fork":
-		return []correlationEdge{{id(0), id(1), .65}, {id(0), id(2), .55}, {id(0), id(3), .45}}
+		return []correlationEdge{{id(0), id(1), .60}, {id(0), id(2), .60}, {id(0), id(3), .60}}
 	case "diamond":
-		return []correlationEdge{{id(0), id(1), .70}, {id(0), id(2), .70}, {id(1), id(3), .60}, {id(2), id(3), .60}}
+		return []correlationEdge{{id(0), id(1), .60}, {id(0), id(2), .60}, {id(1), id(3), .60}, {id(2), id(3), .60}}
 	case "mesh":
 		var edges []correlationEdge
 		for i := 0; i < len(evidence); i++ {
 			for j := i + 1; j < len(evidence); j++ {
-				edges = append(edges, correlationEdge{id(i), id(j), .35})
+				edges = append(edges, correlationEdge{id(i), id(j), .60})
 			}
 		}
 		return edges

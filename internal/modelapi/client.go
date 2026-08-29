@@ -6,13 +6,26 @@ package modelapi
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
+
+// HTTPError preserves response status and retry guidance for acquisition loops.
+type HTTPError struct {
+	StatusCode int
+	Body       string
+	RetryAfter time.Duration
+}
+
+func (e *HTTPError) Error() string {
+	return fmt.Sprintf("HTTP %d: %s", e.StatusCode, e.Body)
+}
 
 // Provider describes one OpenAI- or Anthropic-compatible endpoint.
 type Provider struct {
@@ -29,6 +42,20 @@ type Provider struct {
 	TimeoutSeconds int            `json:"timeout_seconds,omitempty"`
 	Extra          map[string]any `json:"extra,omitempty"`
 	Concurrency    int            `json:"concurrency,omitempty"` // experiment runner hint; ignored by transport
+}
+
+// ResponseFingerprint identifies provider fields that can change model output.
+// Operational scheduling fields (concurrency, timeout, study role) are excluded.
+func (p Provider) ResponseFingerprint() string {
+	value := struct {
+		Name, Model, URL, APIKey, Plugin, MaxTokensParam string
+		MaxTokens                                        int
+		Temperature                                      *float64
+		Seed                                             *int64
+		Extra                                            map[string]any
+	}{p.Name, p.Model, p.URL, p.APIKey, p.Plugin, p.MaxTokensParam, p.MaxTokens, p.Temperature, p.Seed, p.Extra}
+	data, _ := json.Marshal(value)
+	return fmt.Sprintf("%x", sha256.Sum256(data))
 }
 
 // Message is one turn in a provider-neutral conversation.
@@ -149,7 +176,11 @@ func (c *Client) Complete(ctx context.Context, p Provider, apiKey, system string
 		return "", err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(responseBody[:min(len(responseBody), 500)]))
+		retryAfter := time.Duration(0)
+		if seconds, parseErr := strconv.Atoi(resp.Header.Get("Retry-After")); parseErr == nil && seconds > 0 {
+			retryAfter = time.Duration(seconds) * time.Second
+		}
+		return "", &HTTPError{StatusCode: resp.StatusCode, Body: string(responseBody[:min(len(responseBody), 500)]), RetryAfter: retryAfter}
 	}
 
 	var result map[string]any

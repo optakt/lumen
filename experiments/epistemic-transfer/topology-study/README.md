@@ -27,7 +27,7 @@ go run ../../../cmd/generate-transfer-study -out episodes
 
 ## Model panel
 
-Nine known frontier endpoints:
+Eight complete known frontier endpoints:
 
 - Claude Opus 4.6
 - Claude Sonnet 4.6
@@ -36,12 +36,11 @@ Nine known frontier endpoints:
 - DeepSeek V4 Pro
 - Kimi K3
 - GLM 5.3
-- Qwen 3.8 Max
 - Gemini 3.7 Flash
 
-Fable 5 is omitted while credits are unavailable. Claude Haiku 4.5 is acquired as an open-set endpoint only; it never contributes a known-class centroid.
+Fable 5 is omitted while credits are unavailable. Qwen 3.8 Max exhausted its weekly token-plan quota during acquisition. Later protocol hardening invalidated nearly all earlier trajectories; only 3 complete trajectories match the final protocol. Qwen is excluded from headline attribution rather than imputed (`qwen-excluded.jsonl`). Claude Haiku 4.5 is acquired as an open-set endpoint only; it never contributes a known-class centroid.
 
-Provider defaults are deliberately preserved and recorded. The study therefore identifies deployed endpoint configurations, not architecture in isolation.
+Sampling defaults are deliberately preserved. Output ceilings, thinking controls, timeouts, and concurrency are provider-specific operational settings recorded with every result. The study therefore identifies deployed endpoint configurations, not architecture in isolation.
 
 ## Acquisition
 
@@ -51,10 +50,10 @@ Provider defaults are deliberately preserved and recorded. The study therefore i
 
 Two runs produce:
 
-- 800 trajectories total
-- 720 known-class trajectories
+- 720 complete study trajectories total
+- 640 known-class trajectories
 - 80 open-set trajectories
-- 2,400 model-generated transitions, plus 800 canonical seed states
+- 2,160 model-generated transitions, plus 720 canonical seed states
 
 Acquisition is resumable. Every result records the exact provider configuration, parser version, episode SHA-256, model, run, and timestamp.
 
@@ -72,7 +71,8 @@ For each held-out topology:
 
 Representations:
 
-- final-state endpoint baseline
+- final-state structured endpoint baseline
+- final-state hashed texture baseline on the same held-out topology
 - probability-trajectory baseline
 - graph/state trajectory baseline
 - operator summaries

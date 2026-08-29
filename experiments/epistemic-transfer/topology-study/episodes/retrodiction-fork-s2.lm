@@ -3,7 +3,7 @@ episode retrodiction-fork-s2
   variant: s2
   topology: fork
   claim: "Synthetic system X0124 was in state K at time 20."
-  world: "At time 0 the prior applies. At time 10 sources x0124e1, x0124e2 arrive; at time 20 sources x0124e3, x0124e4 arrive. Use the declared log-odds update rule with evidence x0124e1 LR=[2.00,2.40] confidence=0.90; x0124e2 LR=[1.80,2.20] confidence=0.85; x0124e3 LR=[1.60,2.00] confidence=0.80; x0124e4 LR=[1.40,1.80] confidence=0.75. The correlation graph is x0124e1--x0124e2 r=0.65; x0124e1--x0124e3 r=0.55; x0124e1--x0124e4 r=0.45 and uses weight_i=max(0.1,1-sum_j(r_ij)/2). At time 30, the time-10 sources are retracted and current confidence is re-evaluated from surviving support. Retraction changes current support but never rewrites what was justified at time 20."
+  world: "At time 0 the prior applies. Sources may arrive over time. Use the declared log-odds update rule with evidence x0124e1 LR=[2.00,2.40] confidence=0.90; x0124e2 LR=[1.80,2.20] confidence=0.85; x0124e3 LR=[1.60,2.00] confidence=0.80; x0124e4 LR=[1.40,1.80] confidence=0.75. The correlation graph is x0124e1--x0124e2 r=0.60; x0124e1--x0124e3 r=0.60; x0124e1--x0124e4 r=0.60 and uses weight_i=max(0.1,1-sum_j(r_ij)/2). Historical validity is evaluated from information available at the queried time; later events are not known in advance."
   prior: [0.300000, 0.500000]
   step time-zero
     role: prior
@@ -17,7 +17,7 @@ episode retrodiction-fork-s2
   step evidence-one
     role: evidence-one
     intervention: "It is time 10. Observe sources x0124e1, x0124e2 and update from the prior using their induced correlation subgraph."
-    belief: [0.484040, 0.735938]
+    belief: [0.491290, 0.743249]
     state: active
     accepted_support: ["x0124e1","x0124e2"]
     rejected_support: []
@@ -26,7 +26,7 @@ episode retrodiction-fork-s2
   step evidence-two
     role: evidence-two
     intervention: "It is time 20. Observe sources x0124e3, x0124e4 and update using all four valid sources and the full correlation graph."
-    belief: [0.525671, 0.803399]
+    belief: [0.509531, 0.788208]
     state: active
     accepted_support: ["x0124e1","x0124e2","x0124e3","x0124e4"]
     rejected_support: []
@@ -49,5 +49,5 @@ episode retrodiction-fork-s2
     accepted_support: ["x0124e3","x0124e4"]
     rejected_support: ["x0124e1","x0124e2"]
     node_states: {}
-    historical_belief: [0.525671, 0.803399]
+    historical_belief: [0.509531, 0.788208]
     action: hold

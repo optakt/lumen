@@ -327,3 +327,22 @@ Corrected cross-variant results:
 - retrodictive validity alone: 6/16 (37.5%; four tied cases skipped and counted incorrect).
 
 The result establishes feasibility under held-out labels/domains, not publication-level generalization. It does not yet hold out graph topology, separate provider settings from model identity, or support open-set rejection. Full methods and results: `pilot/README.md` and `pilot/RESULTS.md`.
+
+## Topology-Held-Out Study Outcome (2026-08-29)
+
+The stronger follow-up study falsified the model-identification claim at its predeclared decision boundary.
+
+Design: eight known endpoints plus Haiku open-set, five intervention families, four held-out graph topologies, two surface variants, two runs, 720 complete trajectories. Primitive evidence values were held constant across topology folds; only connectivity varied. Qwen was excluded after quota exhaustion, and Fable was unavailable.
+
+Results:
+
+- full Lumen graph-operator signature: 98/128 (76.56%);
+- final-state hashed texture on the same held-out topology: 96/128 (75.00%);
+- paired exact McNemar: `p=0.8804`;
+- operator summaries alone: 37/128 (28.91%);
+- within/between distance AUROC: `0.8421`;
+- Haiku open-set rejection: 0/16 at a training-only 95th-percentile threshold;
+- leave-one-known-model-out rejection: 24/128 (18.75%);
+- separate Pilot 1 static texture baseline: 24/24 (100%).
+
+The trajectories carry real, interpretable endpoint-specific signal, but they do not outperform ordinary final-output texture and they fail open-set identification. Under the falsification criteria above, stop expanding the fingerprinting benchmark and do not tune weights or episode selection against this test set. The complete corpus, analysis, negative result, and independent Opus review are in `topology-study/`.

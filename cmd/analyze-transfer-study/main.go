@@ -24,6 +24,7 @@ type acquisitionResult struct {
 	Observations []transfer.Observation `json:"observations"`
 	Complete     bool                   `json:"complete"`
 	EpisodeHash  string                 `json:"episode_hash"`
+	Provider     modelapi.Provider      `json:"provider"`
 }
 
 type signatureKey struct {
@@ -39,6 +40,7 @@ type evaluation struct {
 	Skipped   int
 	Confusion map[string]map[string]int
 	Distances []float64
+	Outcomes  map[signatureKey]bool
 }
 
 type staticResult struct {
@@ -54,6 +56,7 @@ func main() {
 	resultsPath := flag.String("results", "results.jsonl", "dynamic results")
 	providersPath := flag.String("providers", "providers.json", "study provider config")
 	staticPath := flag.String("static-results", "", "optional Pilot 1 static JSONL")
+	staticOnly := flag.Bool("static-only", false, "report only Pilot 1 static baselines")
 	flag.Parse()
 
 	episodes, err := loadEpisodes(*episodesDir)
@@ -64,25 +67,34 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	results, err := loadResults(*resultsPath, episodes)
-	if err != nil {
-		panic(err)
-	}
-
 	known := map[string]bool{}
 	openSet := map[string]bool{}
 	for _, provider := range providers {
-		if provider.StudyRole == "open-set" {
+		switch provider.StudyRole {
+		case "open-set":
 			openSet[provider.Name] = true
-		} else {
+		case "known", "":
 			known[provider.Name] = true
 		}
 	}
 	if len(known) < 2 {
 		panic("study requires at least two known models")
 	}
+	if *staticOnly {
+		if *staticPath == "" {
+			panic("-static-only requires -static-results")
+		}
+		if err := reportStatic(*staticPath, known); err != nil {
+			panic(err)
+		}
+		return
+	}
 
-	full, final, err := buildVectors(results, episodes, known)
+	results, err := loadResults(*resultsPath, episodes, providers)
+	if err != nil {
+		panic(err)
+	}
+	full, final, finalTexture, err := buildVectors(results, episodes, known)
 	if err != nil {
 		panic(err)
 	}
@@ -96,10 +108,21 @@ func main() {
 	fmt.Printf("Topologies: %s\n\n", strings.Join(transfer.StudyTopologies, ", "))
 
 	reportRepresentation("final-state endpoint baseline", final, known)
+	reportRepresentation("final-state hashed texture baseline", finalTexture, known)
 	reportRepresentation("probability trajectory baseline", probability, known)
 	reportRepresentation("graph/state trajectory baseline", graph, known)
 	reportRepresentation("operator summaries", operator, known)
 	reportRepresentation("full Lumen graph-operator signature", full, known)
+	reportPairedComparisons(full, map[string]map[signatureKey]transfer.FeatureVector{
+		"final structured": final,
+		"final texture":    finalTexture,
+		"probability":      probability,
+		"graph/state":      graph,
+		"operators":        operator,
+	}, known)
+	reportFamilyAblations(full, known)
+	reportSeparation(full, known)
+	reportLeaveOneModelOut(full, known)
 
 	if len(openSet) > 0 {
 		reportOpenSet(full, results, episodes, known, openSet)
@@ -111,9 +134,107 @@ func main() {
 	}
 }
 
-func buildVectors(results []acquisitionResult, episodes map[string]*transfer.Episode, include map[string]bool) (map[signatureKey]transfer.FeatureVector, map[signatureKey]transfer.FeatureVector, error) {
+func reportFamilyAblations(full map[signatureKey]transfer.FeatureVector, known map[string]bool) {
+	families := []string{
+		"correlation-disclosure",
+		"retraction-cascade",
+		"retrodictive-validity",
+		"source-reliability-reversal",
+		"recovery-hysteresis",
+	}
+	fmt.Println("full trajectory by intervention family")
+	for _, family := range families {
+		familyVectors := filterVectors(full, func(key string) bool { return strings.HasPrefix(key, family+".") })
+		result := evaluateAll(familyVectors, known)
+		fmt.Printf("  %-30s %3d/%-3d %6.2f%% skipped=%d\n", family, result.Correct, result.Total, percent(result.Correct, result.Total), result.Skipped)
+	}
+	fmt.Println()
+}
+
+func reportLeaveOneModelOut(full map[signatureKey]transfer.FeatureVector, known map[string]bool) {
+	fmt.Println("leave-one-model-out rejection")
+	models := sortedModels(known)
+	var rejected, total int
+	for _, heldOutModel := range models {
+		trainingModels := map[string]bool{}
+		for model := range known {
+			if model != heldOutModel {
+				trainingModels[model] = true
+			}
+		}
+		modelRejected, modelTotal := 0, 0
+		for _, topology := range transfer.StudyTopologies {
+			train := map[string][]transfer.FeatureVector{}
+			for key, vector := range full {
+				if trainingModels[key.Model] && key.Topology != topology {
+					train[key.Model] = append(train[key.Model], vector)
+				}
+			}
+			refs := centroids(train)
+			threshold := calibrationThreshold(full, trainingModels, topology)
+			for key, vector := range full {
+				if key.Model != heldOutModel || key.Topology != topology {
+					continue
+				}
+				ranked := transfer.RankedDistances(vector, refs)
+				modelTotal++
+				if len(ranked) == 0 || ranked[0].Distance > threshold {
+					modelRejected++
+				}
+			}
+		}
+		rejected += modelRejected
+		total += modelTotal
+		fmt.Printf("  %-24s %d/%d = %.2f%% rejected\n", heldOutModel, modelRejected, modelTotal, percent(modelRejected, modelTotal))
+	}
+	fmt.Printf("  macro total              %d/%d = %.2f%% rejected\n\n", rejected, total, percent(rejected, total))
+}
+
+func reportSeparation(vectors map[signatureKey]transfer.FeatureVector, known map[string]bool) {
+	var within, between []float64
+	keys := sortedKeys(vectors)
+	for i := 0; i < len(keys); i++ {
+		if !known[keys[i].Model] {
+			continue
+		}
+		for j := i + 1; j < len(keys); j++ {
+			if !known[keys[j].Model] {
+				continue
+			}
+			d := transfer.Distance(vectors[keys[i]], vectors[keys[j]])
+			if math.IsInf(d, 1) {
+				continue
+			}
+			if keys[i].Model == keys[j].Model {
+				within = append(within, d)
+			} else if keys[i].Topology == keys[j].Topology && keys[i].Variant == keys[j].Variant && keys[i].Run == keys[j].Run {
+				between = append(between, d)
+			}
+		}
+	}
+	fmt.Println("distance separation")
+	fmt.Printf("  within-model median:  %.6f (n=%d)\n", median(within), len(within))
+	fmt.Printf("  between-model median: %.6f (n=%d)\n", median(between), len(between))
+	fmt.Printf("  pairwise AUROC (between > within): %.4f\n\n", distanceAUROC(within, between))
+}
+
+func median(values []float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	copyValues := append([]float64(nil), values...)
+	sort.Float64s(copyValues)
+	middle := len(copyValues) / 2
+	if len(copyValues)%2 == 1 {
+		return copyValues[middle]
+	}
+	return (copyValues[middle-1] + copyValues[middle]) / 2
+}
+
+func buildVectors(results []acquisitionResult, episodes map[string]*transfer.Episode, include map[string]bool) (map[signatureKey]transfer.FeatureVector, map[signatureKey]transfer.FeatureVector, map[signatureKey]transfer.FeatureVector, error) {
 	full := map[signatureKey]transfer.FeatureVector{}
 	final := map[signatureKey]transfer.FeatureVector{}
+	finalTexture := map[signatureKey]transfer.FeatureVector{}
 	families := map[signatureKey]map[string]bool{}
 	for _, result := range results {
 		if include != nil && !include[result.Model] {
@@ -123,33 +244,77 @@ func buildVectors(results []acquisitionResult, episodes map[string]*transfer.Epi
 		trajectory := transfer.Trajectory{Episode: episode, Model: result.Model, Run: result.Run, Observations: result.Observations}
 		fullFeatures, err := trajectory.Features(false)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		finalFeatures, err := trajectory.FinalFeatures()
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
+		}
+		textureFeatures, err := finalTextureFeatures(trajectory)
+		if err != nil {
+			return nil, nil, nil, err
 		}
 		key := signatureKey{Model: result.Model, Run: result.Run, Topology: episode.Topology, Variant: episode.Variant}
 		if families[key] == nil {
 			families[key] = map[string]bool{}
 		}
 		if families[key][episode.Family] {
-			return nil, nil, fmt.Errorf("duplicate family %s for %#v", episode.Family, key)
+			return nil, nil, nil, fmt.Errorf("duplicate family %s for %#v", episode.Family, key)
 		}
 		families[key][episode.Family] = true
 		if err := merge(full, key, fullFeatures); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		if err := merge(final, key, finalFeatures); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
+		}
+		if err := merge(finalTexture, key, textureFeatures); err != nil {
+			return nil, nil, nil, err
 		}
 	}
 	for key, present := range families {
 		if len(present) != 5 {
-			return nil, nil, fmt.Errorf("incomplete signature %#v: have families %v", key, present)
+			return nil, nil, nil, fmt.Errorf("incomplete signature %#v: have families %v", key, present)
 		}
 	}
-	return full, final, nil
+	return full, final, finalTexture, nil
+}
+
+func finalTextureFeatures(trajectory transfer.Trajectory) (transfer.FeatureVector, error) {
+	var raw string
+	for i := len(trajectory.Observations) - 1; i >= 0; i-- {
+		if !trajectory.Observations[i].Seeded {
+			raw = trajectory.Observations[i].Raw
+			break
+		}
+	}
+	if raw == "" {
+		return nil, fmt.Errorf("episode %s has no final raw response", trajectory.Episode.ID)
+	}
+	prefix := trajectory.Episode.Family + ".texture."
+	result := transfer.FeatureVector{}
+	words := tokenize(raw)
+	denominator := float64(len(words))
+	if denominator < 1 {
+		denominator = 1
+	}
+	for i := 0; i < 256; i++ {
+		result[fmt.Sprintf("%sword.%03d", prefix, i)] = 0
+		result[fmt.Sprintf("%sbigram.%03d", prefix, i)] = 0
+	}
+	for _, word := range words {
+		h := fnv.New64a()
+		_, _ = h.Write([]byte(word))
+		result[fmt.Sprintf("%sword.%03d", prefix, h.Sum64()%256)] += 1 / denominator
+	}
+	for i := 0; i+1 < len(words); i++ {
+		h := fnv.New64a()
+		_, _ = h.Write([]byte(words[i] + "\x00" + words[i+1]))
+		result[fmt.Sprintf("%sbigram.%03d", prefix, h.Sum64()%256)] += 1 / denominator
+	}
+	result[prefix+"words"] = math.Min(denominator/200, 1)
+	result[prefix+"lines"] = math.Min(float64(strings.Count(raw, "\n")+1)/20, 1)
+	return result, nil
 }
 
 func reportRepresentation(name string, vectors map[signatureKey]transfer.FeatureVector, known map[string]bool) {
@@ -188,7 +353,7 @@ func evaluateHeldOut(vectors map[signatureKey]transfer.FeatureVector, known map[
 }
 
 func score(keys []signatureKey, vectors map[signatureKey]transfer.FeatureVector, centroids map[string]transfer.FeatureVector) evaluation {
-	result := evaluation{Confusion: map[string]map[string]int{}}
+	result := evaluation{Confusion: map[string]map[string]int{}, Outcomes: map[signatureKey]bool{}}
 	for _, key := range keys {
 		result.Total++
 		ranked := transfer.RankedDistances(vectors[key], centroids)
@@ -199,6 +364,9 @@ func score(keys []signatureKey, vectors map[signatureKey]transfer.FeatureVector,
 		predicted := ranked[0].Model
 		if predicted == key.Model {
 			result.Correct++
+			result.Outcomes[key] = true
+		} else {
+			result.Outcomes[key] = false
 		}
 		if result.Confusion[key.Model] == nil {
 			result.Confusion[key.Model] = map[string]int{}
@@ -210,7 +378,7 @@ func score(keys []signatureKey, vectors map[signatureKey]transfer.FeatureVector,
 }
 
 func reportOpenSet(full map[signatureKey]transfer.FeatureVector, results []acquisitionResult, episodes map[string]*transfer.Episode, known, unknown map[string]bool) {
-	unknownVectors, _, err := buildVectors(results, episodes, unknown)
+	unknownVectors, _, _, err := buildVectors(results, episodes, unknown)
 	if err != nil {
 		fmt.Printf("open-set evaluation failed: %v\n", err)
 		return
@@ -228,6 +396,7 @@ func reportOpenSet(full map[signatureKey]transfer.FeatureVector, results []acqui
 	}
 	fmt.Println("open-set rejection")
 	var knownAccepted, knownTotal, unknownRejected, unknownTotal int
+	var knownDistances, unknownDistances []float64
 	for _, topology := range transfer.StudyTopologies {
 		train := map[string][]transfer.FeatureVector{}
 		for key, vector := range full {
@@ -243,6 +412,9 @@ func reportOpenSet(full map[signatureKey]transfer.FeatureVector, results []acqui
 			}
 			ranked := transfer.RankedDistances(vector, refs)
 			knownTotal++
+			if len(ranked) > 0 && !math.IsInf(ranked[0].Distance, 1) {
+				knownDistances = append(knownDistances, ranked[0].Distance)
+			}
 			if len(ranked) > 0 && ranked[0].Distance <= threshold {
 				knownAccepted++
 			}
@@ -253,6 +425,9 @@ func reportOpenSet(full map[signatureKey]transfer.FeatureVector, results []acqui
 			}
 			ranked := transfer.RankedDistances(vector, refs)
 			unknownTotal++
+			if len(ranked) > 0 && !math.IsInf(ranked[0].Distance, 1) {
+				unknownDistances = append(unknownDistances, ranked[0].Distance)
+			}
 			if len(ranked) == 0 || ranked[0].Distance > threshold {
 				unknownRejected++
 			}
@@ -261,6 +436,25 @@ func reportOpenSet(full map[signatureKey]transfer.FeatureVector, results []acqui
 	}
 	fmt.Printf("  known acceptance: %d/%d = %.2f%%\n", knownAccepted, knownTotal, percent(knownAccepted, knownTotal))
 	fmt.Printf("  unknown rejection: %d/%d = %.2f%%\n\n", unknownRejected, unknownTotal, percent(unknownRejected, unknownTotal))
+	fmt.Printf("  distance AUROC (unknown > known): %.4f\n\n", distanceAUROC(knownDistances, unknownDistances))
+}
+
+func distanceAUROC(known, unknown []float64) float64 {
+	if len(known) == 0 || len(unknown) == 0 {
+		return 0
+	}
+	var wins float64
+	for _, u := range unknown {
+		for _, k := range known {
+			switch {
+			case u > k:
+				wins++
+			case u == k:
+				wins += 0.5
+			}
+		}
+	}
+	return wins / float64(len(known)*len(unknown))
 }
 
 // calibrationThreshold uses only the three training topologies. Each training
@@ -295,7 +489,13 @@ func calibrationThreshold(vectors map[signatureKey]transfer.FeatureVector, known
 		return 0
 	}
 	sort.Float64s(distances)
-	return distances[len(distances)-1] * 1.05
+	// Predeclared 95th-percentile acceptance boundary. It permits roughly 5%
+	// known rejection without using any held-out topology or unknown-model data.
+	index := int(math.Ceil(0.95*float64(len(distances)))) - 1
+	if index < 0 {
+		index = 0
+	}
+	return distances[index]
 }
 
 func reportStatic(path string, known map[string]bool) error {
@@ -438,7 +638,19 @@ func isGraphFeature(key string) bool {
 }
 
 func isOperatorFeature(key string) bool {
-	return strings.HasPrefix(key, "correlation-disclosure.discount") || strings.HasPrefix(key, "retraction-cascade.recall") || strings.HasPrefix(key, "retraction-cascade.overreach") || strings.HasPrefix(key, "retrodictive-validity.error") || strings.HasPrefix(key, "source-reliability-reversal.") || strings.HasPrefix(key, "recovery-hysteresis.")
+	return strings.HasPrefix(key, "correlation-disclosure.discount") ||
+		strings.HasPrefix(key, "retraction-cascade.recall") ||
+		strings.HasPrefix(key, "retraction-cascade.overreach") ||
+		key == "retrodictive-validity.valid" ||
+		key == "retrodictive-validity.error" ||
+		key == "source-reliability-reversal.elasticity_valid" ||
+		key == "source-reliability-reversal.downgrade_delta" ||
+		key == "source-reliability-reversal.upgrade_delta" ||
+		key == "source-reliability-reversal.asymmetry" ||
+		key == "recovery-hysteresis.valid" ||
+		key == "recovery-hysteresis.immediate" ||
+		key == "recovery-hysteresis.residual" ||
+		key == "recovery-hysteresis.node_recovery"
 }
 
 func filterVectors(vectors map[signatureKey]transfer.FeatureVector, keep func(string) bool) map[signatureKey]transfer.FeatureVector {
@@ -505,6 +717,12 @@ func aggregateEvaluation(target *evaluation, source evaluation) {
 	target.Correct += source.Correct
 	target.Total += source.Total
 	target.Skipped += source.Skipped
+	if target.Outcomes == nil {
+		target.Outcomes = map[signatureKey]bool{}
+	}
+	for key, correct := range source.Outcomes {
+		target.Outcomes[key] = correct
+	}
 	for actual, predictions := range source.Confusion {
 		if target.Confusion[actual] == nil {
 			target.Confusion[actual] = map[string]int{}
@@ -513,6 +731,64 @@ func aggregateEvaluation(target *evaluation, source evaluation) {
 			target.Confusion[actual][predicted] += count
 		}
 	}
+}
+
+func evaluateAll(vectors map[signatureKey]transfer.FeatureVector, known map[string]bool) evaluation {
+	result := evaluation{Confusion: map[string]map[string]int{}, Outcomes: map[signatureKey]bool{}}
+	for _, topology := range transfer.StudyTopologies {
+		aggregateEvaluation(&result, evaluateHeldOut(vectors, known, topology))
+	}
+	return result
+}
+
+func reportPairedComparisons(full map[signatureKey]transfer.FeatureVector, baselines map[string]map[signatureKey]transfer.FeatureVector, known map[string]bool) {
+	fullResult := evaluateAll(full, known)
+	fmt.Println("paired comparison with full signature")
+	names := make([]string, 0, len(baselines))
+	for name := range baselines {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		baseline := evaluateAll(baselines[name], known)
+		fullOnly, baselineOnly := 0, 0
+		for key, fullCorrect := range fullResult.Outcomes {
+			baselineCorrect, ok := baseline.Outcomes[key]
+			if !ok {
+				continue
+			}
+			switch {
+			case fullCorrect && !baselineCorrect:
+				fullOnly++
+			case !fullCorrect && baselineCorrect:
+				baselineOnly++
+			}
+		}
+		fmt.Printf("  %-18s full-only=%2d baseline-only=%2d McNemar exact p=%.4f\n", name, fullOnly, baselineOnly, exactMcNemar(fullOnly, baselineOnly))
+	}
+	fmt.Println()
+}
+
+func exactMcNemar(a, b int) float64 {
+	n := a + b
+	if n == 0 {
+		return 1
+	}
+	k := a
+	if b < k {
+		k = b
+	}
+	term := math.Pow(0.5, float64(n)) // P(X=0)
+	probability := term
+	for i := 1; i <= k; i++ {
+		term *= float64(n-i+1) / float64(i)
+		probability += term
+	}
+	probability *= 2
+	if probability > 1 {
+		return 1
+	}
+	return probability
 }
 
 func printConfusion(confusion map[string]map[string]int, models []string) {
@@ -588,13 +864,17 @@ func loadProviders(path string) ([]modelapi.Provider, error) {
 	return providers, nil
 }
 
-func loadResults(path string, episodes map[string]*transfer.Episode) ([]acquisitionResult, error) {
+func loadResults(path string, episodes map[string]*transfer.Episode, providers []modelapi.Provider) ([]acquisitionResult, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
-	var results []acquisitionResult
+	byKey := map[string]acquisitionResult{}
+	providerFingerprints := map[string]string{}
+	for _, provider := range providers {
+		providerFingerprints[provider.Name] = provider.ResponseFingerprint()
+	}
 	scanner := bufio.NewScanner(f)
 	scanner.Buffer(make([]byte, 64*1024), 8*1024*1024)
 	for scanner.Scan() {
@@ -607,7 +887,10 @@ func loadResults(path string, episodes map[string]*transfer.Episode) ([]acquisit
 			return nil, fmt.Errorf("unknown episode %s", result.Episode)
 		}
 		if result.EpisodeHash != episode.Hash {
-			return nil, fmt.Errorf("episode hash mismatch for %s", result.Episode)
+			continue // stale trajectory from a superseded episode definition
+		}
+		if result.Provider.ResponseFingerprint() != providerFingerprints[result.Model] {
+			continue // stale trajectory from a superseded response configuration
 		}
 		if !result.Complete || len(result.Observations) != len(episode.Steps) {
 			continue
@@ -627,9 +910,22 @@ func loadResults(path string, episodes map[string]*transfer.Episode) ([]acquisit
 			observation.State = state
 			observation.ProtocolCompliant = compliant
 		}
-		results = append(results, result)
+		key := fmt.Sprintf("%s|%s|%d", result.Model, result.Episode, result.Run)
+		byKey[key] = result
 	}
-	return results, scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	keys := make([]string, 0, len(byKey))
+	for key := range byKey {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	results := make([]acquisitionResult, 0, len(keys))
+	for _, key := range keys {
+		results = append(results, byKey[key])
+	}
+	return results, nil
 }
 
 func sortedKeys(vectors map[signatureKey]transfer.FeatureVector) []signatureKey {

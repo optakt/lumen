@@ -40,7 +40,7 @@
     "plugin": "completions",
     "max_tokens": 2000,
     "timeout_seconds": 300,
-    "concurrency": 4,
+    "concurrency": 16,
     "study_role": "known"
   },
   {
@@ -60,9 +60,14 @@
     "url": "https://api.moonshot.ai/anthropic",
     "api_key_env": "MOONSHOT_API_KEY",
     "plugin": "messages",
-    "max_tokens": 8000,
-    "timeout_seconds": 300,
+    "max_tokens": 2000,
+    "timeout_seconds": 180,
     "concurrency": 4,
+    "extra": {
+      "thinking": {
+        "type": "disabled"
+      }
+    },
     "study_role": "known"
   },
   {
@@ -71,9 +76,14 @@
     "url": "https://api.z.ai/api/anthropic",
     "api_key_env": "ZAI_API_KEY",
     "plugin": "messages",
-    "max_tokens": 4000,
+    "max_tokens": 2000,
     "timeout_seconds": 180,
     "concurrency": 2,
+    "extra": {
+      "thinking": {
+        "type": "disabled"
+      }
+    },
     "study_role": "known"
   },
   {
@@ -88,7 +98,7 @@
     "extra": {
       "enable_thinking": false
     },
-    "study_role": "known"
+    "study_role": "excluded-quota"
   },
   {
     "name": "gemini-3.7-flash",

@@ -3,7 +3,7 @@ episode correlation-fork-s2
   variant: s2
   topology: fork
   claim: "Process X0102 stabilizes synthetic material X0102X."
-  world: "Only sources x01021, x01022, x01023, x01024 bear on the focal claim. The prior is updated in log-odds space. For source i, effective LR endpoint = 1 + confidence_i*(LR_i-1). Before correlation disclosure, source weight is 1. After disclosure, weight_i=max(0.1,1-sum_j(r_ij)/2), and weighted log effective LRs are added to prior log odds. Evidence: x01021 LR=[1.80,2.20] confidence=0.90; x01022 LR=[1.60,2.00] confidence=0.85; x01023 LR=[1.50,1.90] confidence=0.80; x01024 LR=[1.40,1.80] confidence=0.75. Correlation graph on disclosure: x01021--x01022 r=0.65; x01021--x01023 r=0.55; x01021--x01024 r=0.45."
+  world: "Only sources x01021, x01022, x01023, x01024 bear on the focal claim. The prior is updated in log-odds space. For source i, effective LR endpoint = 1 + confidence_i*(LR_i-1). Before correlation disclosure, source weight is 1. After disclosure, weight_i=max(0.1,1-sum_j(r_ij)/2), and weighted log effective LRs are added to prior log odds. Evidence: x01021 LR=[1.80,2.20] confidence=0.90; x01022 LR=[1.60,2.00] confidence=0.85; x01023 LR=[1.50,1.90] confidence=0.80; x01024 LR=[1.40,1.80] confidence=0.75. No correlation structure is available until an audit explicitly discloses it."
   prior: [0.350000, 0.550000]
   step prior
     role: prior
@@ -25,8 +25,8 @@ episode correlation-fork-s2
     action: revise
   step correlation-disclosed
     role: disclosed
-    intervention: "Audit reveals the following symmetric correlation graph: x01021--x01022 r=0.65; x01021--x01023 r=0.55; x01021--x01024 r=0.45. Recompute under the declared weighting rule without discarding any observation."
-    belief: [0.550160, 0.817802]
+    intervention: "Audit reveals the following symmetric correlation graph: x01021--x01022 r=0.60; x01021--x01023 r=0.60; x01021--x01024 r=0.60. Recompute under the declared weighting rule without discarding any observation."
+    belief: [0.535653, 0.804265]
     state: active
     accepted_support: ["x01021","x01022","x01023","x01024"]
     rejected_support: []
@@ -35,7 +35,7 @@ episode correlation-fork-s2
   step irrelevant
     role: isolation
     intervention: "Source x0102Z reports an unrelated color change and has no edge to the focal claim. Preserve the epistemic state."
-    belief: [0.550160, 0.817802]
+    belief: [0.535653, 0.804265]
     state: active
     accepted_support: ["x01021","x01022","x01023","x01024"]
     rejected_support: []
