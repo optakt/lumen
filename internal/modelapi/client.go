@@ -16,12 +16,15 @@ import (
 
 // Provider describes one OpenAI- or Anthropic-compatible endpoint.
 type Provider struct {
-	Name      string `json:"name"`
-	Model     string `json:"model"`
-	URL       string `json:"url"`
-	APIKey    string `json:"api_key_env"`
-	Plugin    string `json:"plugin"` // "messages" or "completions"
-	MaxTokens int    `json:"max_tokens,omitempty"`
+	Name           string   `json:"name"`
+	Model          string   `json:"model"`
+	URL            string   `json:"url"`
+	APIKey         string   `json:"api_key_env"`
+	Plugin         string   `json:"plugin"` // "messages" or "completions"
+	MaxTokens      int      `json:"max_tokens,omitempty"`
+	Temperature    *float64 `json:"temperature,omitempty"`
+	Seed           *int64   `json:"seed,omitempty"`
+	MaxTokensParam string   `json:"max_tokens_param,omitempty"`
 }
 
 // Message is one turn in a provider-neutral conversation.
@@ -49,8 +52,9 @@ func (c *Client) Complete(ctx context.Context, p Provider, apiKey, system string
 	if apiKey == "" {
 		return "", fmt.Errorf("empty API key for %s", p.Name)
 	}
-	if c.HTTP == nil {
-		c.HTTP = &http.Client{Timeout: 2 * time.Minute}
+	httpClient := c.HTTP
+	if httpClient == nil {
+		httpClient = &http.Client{Timeout: 2 * time.Minute}
 	}
 	maxTokens := c.MaxTokens
 	if p.MaxTokens > 0 {
@@ -65,7 +69,7 @@ func (c *Client) Complete(ctx context.Context, p Provider, apiKey, system string
 	switch p.Plugin {
 	case "completions":
 		base := strings.TrimSuffix(p.URL, "/")
-		if !strings.HasSuffix(base, "/v1") && !strings.Contains(base, "/v1/") && !strings.Contains(base, "/v1beta/") {
+		if !strings.HasSuffix(base, "/v1") && !strings.HasSuffix(base, "/v1beta") && !strings.Contains(base, "/v1/") && !strings.Contains(base, "/v1beta/") {
 			base += "/v1"
 		}
 		endpoint = base + "/chat/completions"
@@ -74,10 +78,20 @@ func (c *Client) Complete(ctx context.Context, p Provider, apiKey, system string
 			providerMessages = append(providerMessages, Message{Role: "system", Content: system})
 		}
 		providerMessages = append(providerMessages, messages...)
+		maxTokensParam := p.MaxTokensParam
+		if maxTokensParam == "" {
+			maxTokensParam = "max_completion_tokens"
+		}
 		payload = map[string]any{
-			"model":                 p.Model,
-			"messages":              providerMessages,
-			"max_completion_tokens": maxTokens,
+			"model":        p.Model,
+			"messages":     providerMessages,
+			maxTokensParam: maxTokens,
+		}
+		if p.Temperature != nil {
+			payload.(map[string]any)["temperature"] = *p.Temperature
+		}
+		if p.Seed != nil {
+			payload.(map[string]any)["seed"] = *p.Seed
 		}
 	case "messages":
 		endpoint = strings.TrimSuffix(p.URL, "/") + "/v1/messages"
@@ -86,6 +100,9 @@ func (c *Client) Complete(ctx context.Context, p Provider, apiKey, system string
 			"system":     system,
 			"messages":   messages,
 			"max_tokens": maxTokens,
+		}
+		if p.Temperature != nil {
+			payload.(map[string]any)["temperature"] = *p.Temperature
 		}
 	default:
 		return "", fmt.Errorf("unknown provider plugin %q", p.Plugin)
@@ -107,7 +124,7 @@ func (c *Client) Complete(ctx context.Context, p Provider, apiKey, system string
 		req.Header.Set("anthropic-version", "2023-06-01")
 	}
 
-	resp, err := c.HTTP.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -130,6 +147,10 @@ func (c *Client) Complete(ctx context.Context, p Provider, apiKey, system string
 			return "", fmt.Errorf("no choices in response")
 		}
 		choice, _ := choices[0].(map[string]any)
+		finishReason, _ := choice["finish_reason"].(string)
+		if finishReason == "length" || finishReason == "max_tokens" {
+			return "", fmt.Errorf("response truncated: finish_reason=%s", finishReason)
+		}
 		message, _ := choice["message"].(map[string]any)
 		text, _ := message["content"].(string)
 		if text == "" {
@@ -138,6 +159,10 @@ func (c *Client) Complete(ctx context.Context, p Provider, apiKey, system string
 		return text, nil
 	}
 
+	stopReason, _ := result["stop_reason"].(string)
+	if stopReason == "max_tokens" {
+		return "", fmt.Errorf("response truncated: stop_reason=max_tokens")
+	}
 	content, _ := result["content"].([]any)
 	for _, rawBlock := range content {
 		block, _ := rawBlock.(map[string]any)

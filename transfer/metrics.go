@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 )
 
 // Observation is one model state paired with the step that elicited it.
@@ -43,40 +44,83 @@ func (t Trajectory) Features(staticOnly bool) (FeatureVector, error) {
 	if len(t.Observations) != len(t.Episode.Steps) {
 		return nil, fmt.Errorf("episode %s has %d/%d observations", t.Episode.ID, len(t.Observations), len(t.Episode.Steps))
 	}
-	features := FeatureVector{}
-	limit := len(t.Observations)
 	if staticOnly {
-		limit = 1
+		// B0 is injected by Lumen and is identical for every model. This is a
+		// null baseline, not a model-generated fingerprint.
+		return FeatureVector{"canonical_seed": 1}, nil
 	}
-	for i := 0; i < limit; i++ {
-		obs := t.Observations[i]
+	features := FeatureVector{}
+	for i, obs := range t.Observations {
+		step := t.Episode.Steps[i]
+		if obs.Step != i || obs.StepID != step.ID || obs.Role != step.Role {
+			return nil, fmt.Errorf("episode %s observation %d does not align with step %s/%s", t.Episode.ID, i, step.ID, step.Role)
+		}
+		if obs.Seeded {
+			continue
+		}
 		ref := t.Episode.Steps[i].Reference
 		prefix := t.Episode.Family + "." + t.Episode.Steps[i].Role
-		features[prefix+".mid"] = obs.State.Belief.Midpoint()
-		features[prefix+".width"] = obs.State.Belief.Width()
-		features[prefix+".mid_residual"] = obs.State.Belief.Midpoint() - ref.Belief.Midpoint()
-		features[prefix+".width_residual"] = obs.State.Belief.Width() - ref.Belief.Width()
-		features[prefix+".state_match"] = boolFloat(obs.State.Status == ref.Status)
-		features[prefix+".action_match"] = boolFloat(obs.State.Action == ref.Action)
-		features[prefix+".support_jaccard"] = setJaccard(obs.State.AcceptedSupport, ref.AcceptedSupport)
-		features[prefix+".node_match"] = mapAgreement(obs.State.NodeStates, ref.NodeStates)
+		features[prefix+".missing"] = boolFloat(obs.Error != "")
+		beliefValid := fieldValid(obs, "belief")
+		features[prefix+".belief_valid"] = boolFloat(beliefValid)
+		if beliefValid {
+			features[prefix+".mid"] = obs.State.Belief.Midpoint()
+			features[prefix+".width"] = obs.State.Belief.Width()
+			features[prefix+".mid_residual"] = obs.State.Belief.Midpoint() - ref.Belief.Midpoint()
+			features[prefix+".width_residual"] = obs.State.Belief.Width() - ref.Belief.Width()
+		} else {
+			features[prefix+".mid"] = 0
+			features[prefix+".width"] = 0
+			features[prefix+".mid_residual"] = 0
+			features[prefix+".width_residual"] = 0
+		}
+		stateValid := fieldValid(obs, "state")
+		actionValid := fieldValid(obs, "action")
+		supportValid := fieldValid(obs, "accepted_support")
+		rejectedValid := fieldValid(obs, "rejected_support")
+		nodeValid := fieldValid(obs, "node_states")
+		features[prefix+".state_valid"] = boolFloat(stateValid)
+		features[prefix+".action_valid"] = boolFloat(actionValid)
+		features[prefix+".support_valid"] = boolFloat(supportValid)
+		features[prefix+".rejected_support_valid"] = boolFloat(rejectedValid)
+		features[prefix+".node_valid"] = boolFloat(nodeValid)
+		features[prefix+".state_match"] = boolFloat(stateValid && obs.State.Status == ref.Status)
+		features[prefix+".action_match"] = boolFloat(actionValid && obs.State.Action == ref.Action)
+		if supportValid {
+			features[prefix+".support_jaccard"] = setJaccard(obs.State.AcceptedSupport, ref.AcceptedSupport)
+		} else {
+			features[prefix+".support_jaccard"] = 0
+		}
+		if rejectedValid {
+			features[prefix+".rejected_support_jaccard"] = setJaccard(obs.State.RejectedSupport, ref.RejectedSupport)
+		} else {
+			features[prefix+".rejected_support_jaccard"] = 0
+		}
+		if nodeValid {
+			features[prefix+".node_match"] = mapAgreement(obs.State.NodeStates, ref.NodeStates)
+		} else {
+			features[prefix+".node_match"] = 0
+		}
 		features[prefix+".protocol_compliance"] = boolFloat(obs.ProtocolCompliant)
 		if ref.HistoricalBelief != nil {
-			if obs.State.HistoricalBelief == nil {
+			historicalValid := fieldValid(obs, "historical_belief") && obs.State.HistoricalBelief != nil
+			features[prefix+".historical_valid"] = boolFloat(historicalValid)
+			if !historicalValid {
 				features[prefix+".retrodiction_error"] = 1
 			} else {
 				features[prefix+".retrodiction_error"] = intervalMAE(*obs.State.HistoricalBelief, *ref.HistoricalBelief)
 			}
 		}
 	}
-	if staticOnly {
-		return features, nil
-	}
 
 	switch t.Episode.Family {
 	case "correlation-disclosure":
 		before, after, ok := rolePair(t, "independent", "correlated")
-		if ok {
+		valid := ok && fieldValid(before, "belief") && fieldValid(after, "belief")
+		features["correlation-disclosure.discount_valid"] = boolFloat(valid)
+		features["correlation-disclosure.discount"] = 0
+		features["correlation-disclosure.discount_residual"] = 0
+		if valid {
 			features["correlation-disclosure.discount"] = before.State.Belief.Midpoint() - after.State.Belief.Midpoint()
 			refBefore := referenceByRole(t.Episode, "independent")
 			refAfter := referenceByRole(t.Episode, "correlated")
@@ -84,7 +128,11 @@ func (t Trajectory) Features(staticOnly bool) (FeatureVector, error) {
 		}
 	case "retraction-cascade":
 		obs, ref, ok := roleState(t, "retracted")
-		if ok {
+		valid := ok && fieldValid(obs, "node_states")
+		features["retraction-cascade.topology_valid"] = boolFloat(valid)
+		features["retraction-cascade.recall"] = 0
+		features["retraction-cascade.overreach"] = 0
+		if valid {
 			expected := keysWithState(ref.NodeStates, "suspect")
 			actual := keysWithState(obs.State.NodeStates, "suspect")
 			features["retraction-cascade.recall"] = recall(actual, expected)
@@ -92,35 +140,42 @@ func (t Trajectory) Features(staticOnly bool) (FeatureVector, error) {
 		}
 	case "retrodictive-validity":
 		obs, ref, ok := roleState(t, "historical-query")
-		if ok && ref.HistoricalBelief != nil {
-			if obs.State.HistoricalBelief == nil {
-				features["retrodictive-validity.error"] = 1
-			} else {
-				features["retrodictive-validity.error"] = intervalMAE(*obs.State.HistoricalBelief, *ref.HistoricalBelief)
-			}
+		valid := ok && ref.HistoricalBelief != nil && fieldValid(obs, "historical_belief") && obs.State.HistoricalBelief != nil
+		features["retrodictive-validity.valid"] = boolFloat(valid)
+		features["retrodictive-validity.error"] = 1
+		if valid {
+			features["retrodictive-validity.error"] = intervalMAE(*obs.State.HistoricalBelief, *ref.HistoricalBelief)
 		}
 	}
 	return features, nil
 }
 
-// Distance computes mean normalized absolute distance over shared features.
-// Match-like features are already in [0,1]; signed residuals and probabilities
-// are bounded to [-1,1], so absolute differences share a common scale.
+// Distance computes mean normalized absolute distance over an identical feature
+// schema. Mismatched or empty schemas are incomparable. Match-like features are
+// already in [0,1]; signed residuals and probabilities are bounded to [-1,1].
 func Distance(a, b FeatureVector) float64 {
-	var total float64
-	var n int
-	for key, av := range a {
-		bv, ok := b[key]
-		if !ok {
-			continue
-		}
-		total += math.Abs(av - bv)
-		n++
-	}
-	if n == 0 {
+	if len(a) == 0 || len(a) != len(b) {
 		return math.Inf(1)
 	}
-	return total / float64(n)
+	keys := make([]string, 0, len(a))
+	for key := range a {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	var total float64
+	for _, key := range keys {
+		av := a[key]
+		bv, ok := b[key]
+		if !ok {
+			return math.Inf(1)
+		}
+		delta := math.Abs(av - bv)
+		if strings.Contains(key, "residual") || strings.HasSuffix(key, ".discount") {
+			delta /= 2 // signed features span [-1,1]; normalize pairwise range to [0,1]
+		}
+		total += delta
+	}
+	return total / float64(len(a))
 }
 
 // Centroid computes a feature-wise mean over complete vectors.
@@ -192,6 +247,18 @@ func referenceByRole(e *Episode, role string) State {
 	return State{}
 }
 
+func fieldValid(obs Observation, field string) bool {
+	if obs.Seeded {
+		return true
+	}
+	if obs.State.Validity == nil {
+		// Results written before field-level validity was persisted are
+		// reparsed by the experiment loader before feature extraction.
+		return false
+	}
+	return obs.State.Validity[field]
+}
+
 func intervalMAE(a, b Interval) float64 {
 	return (math.Abs(a.Lo-b.Lo) + math.Abs(a.Hi-b.Hi)) / 2
 }
@@ -232,12 +299,17 @@ func mapAgreement(a, b map[string]string) float64 {
 		return 0
 	}
 	matches := 0
+	union := map[string]bool{}
 	for key, value := range b {
+		union[key] = true
 		if a[key] == value {
 			matches++
 		}
 	}
-	return float64(matches) / float64(len(b))
+	for key := range a {
+		union[key] = true
+	}
+	return float64(matches) / float64(len(union))
 }
 
 func keysWithState(states map[string]string, wanted string) []string {

@@ -5,6 +5,7 @@ package transfer
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -40,6 +41,7 @@ type State struct {
 	NodeStates       map[string]string `json:"node_states,omitempty"`
 	HistoricalBelief *Interval         `json:"historical_belief,omitempty"`
 	Action           string            `json:"action"`
+	Validity         map[string]bool   `json:"field_validity,omitempty"`
 }
 
 // Step is one intervention and its episode-defined reference state.
@@ -60,6 +62,7 @@ type Episode struct {
 	Prior   Interval
 	Steps   []Step
 	Path    string
+	Hash    string
 }
 
 // MarshalState returns the canonical JSON representation injected as the
@@ -69,12 +72,24 @@ func MarshalState(state State) (string, error) {
 	if state.HistoricalBelief != nil {
 		historical = []float64{state.HistoricalBelief.Lo, state.HistoricalBelief.Hi}
 	}
+	accepted := state.AcceptedSupport
+	if accepted == nil {
+		accepted = []string{}
+	}
+	rejected := state.RejectedSupport
+	if rejected == nil {
+		rejected = []string{}
+	}
+	nodes := state.NodeStates
+	if nodes == nil {
+		nodes = map[string]string{}
+	}
 	wire := map[string]any{
 		"belief":            []float64{state.Belief.Lo, state.Belief.Hi},
 		"state":             state.Status,
-		"accepted_support":  state.AcceptedSupport,
-		"rejected_support":  state.RejectedSupport,
-		"node_states":       state.NodeStates,
+		"accepted_support":  accepted,
+		"rejected_support":  rejected,
+		"node_states":       nodes,
 		"historical_belief": historical,
 		"action":            state.Action,
 	}
@@ -84,15 +99,13 @@ func MarshalState(state State) (string, error) {
 
 // ParseFile parses an experimental episode declaration from a .lm file.
 func ParseFile(path string) (*Episode, error) {
-	f, err := os.Open(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-
-	ep := &Episode{Path: path}
+	ep := &Episode{Path: path, Hash: fmt.Sprintf("%x", sha256.Sum256(data))}
 	var step *Step
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(strings.NewReader(string(data)))
 	lineNo := 0
 	for scanner.Scan() {
 		lineNo++
@@ -102,6 +115,9 @@ func ParseFile(path string) (*Episode, error) {
 			continue
 		}
 		indent := len(raw) - len(strings.TrimLeft(raw, " \t"))
+		if strings.Contains(raw[:indent], "\t") {
+			return nil, fmt.Errorf("%s:%d: tabs are not allowed for indentation", path, lineNo)
+		}
 		if indent == 0 {
 			if !strings.HasPrefix(trimmed, "episode ") {
 				return nil, fmt.Errorf("%s:%d: expected episode declaration", path, lineNo)
@@ -190,6 +206,7 @@ func (e *Episode) Validate() error {
 		return fmt.Errorf("episode requires at least two steps")
 	}
 	seen := map[string]bool{}
+	seenRoles := map[string]bool{}
 	for i, step := range e.Steps {
 		if step.ID == "" || step.Role == "" || step.Intervention == "" {
 			return fmt.Errorf("step %d requires id, role, and intervention", i)
@@ -198,6 +215,10 @@ func (e *Episode) Validate() error {
 			return fmt.Errorf("duplicate step %q", step.ID)
 		}
 		seen[step.ID] = true
+		if seenRoles[step.Role] {
+			return fmt.Errorf("duplicate step role %q", step.Role)
+		}
+		seenRoles[step.Role] = true
 		if !step.Reference.Belief.Valid() {
 			return fmt.Errorf("step %s has invalid belief interval", step.ID)
 		}
@@ -249,10 +270,9 @@ func ParseStateLenient(raw string) (State, bool, error) {
 			trimmed = strings.Join(lines[1:len(lines)-1], "\n")
 		}
 	}
-	start := strings.Index(trimmed, "{")
-	end := strings.LastIndex(trimmed, "}")
-	if start < 0 || end < start {
-		return State{}, false, fmt.Errorf("response contains no JSON object")
+	start, end, ok := firstJSONObject(trimmed)
+	if !ok {
+		return State{}, false, fmt.Errorf("response contains no complete JSON object")
 	}
 	compliant := strings.TrimSpace(trimmed[:start]) == "" && strings.TrimSpace(trimmed[end+1:]) == ""
 	var wire map[string]json.RawMessage
@@ -264,6 +284,7 @@ func ParseStateLenient(raw string) (State, bool, error) {
 		"rejected_support": true, "node_states": true,
 		"historical_belief": true, "action": true,
 	}
+	validity := map[string]bool{}
 	for key := range wire {
 		if !allowed[key] {
 			compliant = false
@@ -271,14 +292,24 @@ func ParseStateLenient(raw string) (State, bool, error) {
 	}
 
 	var belief []float64
-	if err := json.Unmarshal(wire["belief"], &belief); err != nil || len(belief) != 2 {
-		return State{}, false, fmt.Errorf("belief must contain exactly two bounds")
+	beliefErr := json.Unmarshal(wire["belief"], &belief)
+	beliefInterval := Interval{}
+	if beliefErr == nil && len(belief) == 2 {
+		beliefInterval = Interval{Lo: belief[0], Hi: belief[1]}
 	}
-	var status, action string
-	if err := json.Unmarshal(wire["state"], &status); err != nil {
+	validity["belief"] = beliefErr == nil && len(belief) == 2 && beliefInterval.Valid()
+	if !validity["belief"] {
 		compliant = false
 	}
-	if err := json.Unmarshal(wire["action"], &action); err != nil {
+	var status, action string
+	statusErr := json.Unmarshal(wire["state"], &status)
+	validity["state"] = statusErr == nil && validStatus(status)
+	if statusErr != nil || !validStatus(status) {
+		compliant = false
+	}
+	actionErr := json.Unmarshal(wire["action"], &action)
+	validity["action"] = actionErr == nil && validAction(action)
+	if actionErr != nil || !validAction(action) {
 		compliant = false
 	}
 	normalizedStatus := normalizeStatus(status)
@@ -287,14 +318,20 @@ func ParseStateLenient(raw string) (State, bool, error) {
 		compliant = false
 	}
 	var accepted, rejected []string
-	if err := json.Unmarshal(wire["accepted_support"], &accepted); err != nil {
+	acceptedErr := json.Unmarshal(wire["accepted_support"], &accepted)
+	validity["accepted_support"] = acceptedErr == nil && string(wire["accepted_support"]) != "null"
+	if !validity["accepted_support"] {
 		compliant = false
 	}
-	if err := json.Unmarshal(wire["rejected_support"], &rejected); err != nil {
+	rejectedErr := json.Unmarshal(wire["rejected_support"], &rejected)
+	validity["rejected_support"] = rejectedErr == nil && string(wire["rejected_support"]) != "null"
+	if !validity["rejected_support"] {
 		compliant = false
 	}
 	var nodeStates map[string]string
-	if err := json.Unmarshal(wire["node_states"], &nodeStates); err != nil {
+	nodeErr := json.Unmarshal(wire["node_states"], &nodeStates)
+	validity["node_states"] = nodeErr == nil && string(wire["node_states"]) != "null"
+	if !validity["node_states"] {
 		compliant = false
 		nodeStates = map[string]string{}
 	}
@@ -302,33 +339,91 @@ func ParseStateLenient(raw string) (State, bool, error) {
 		normalized := normalizeStatus(nodeStatus)
 		if normalized != nodeStatus {
 			compliant = false
+			validity["node_states"] = false
 			nodeStates[node] = normalized
 		}
 	}
 	state := State{
-		Belief:          Interval{Lo: belief[0], Hi: belief[1]},
+		Belief:          beliefInterval,
 		Status:          normalizedStatus,
 		AcceptedSupport: accepted,
 		RejectedSupport: rejected,
 		NodeStates:      nodeStates,
 		Action:          normalizedAction,
+		Validity:        validity,
 	}
 	if historicalRaw, ok := wire["historical_belief"]; ok && string(historicalRaw) != "null" {
 		var historicalValues []float64
 		if err := json.Unmarshal(historicalRaw, &historicalValues); err == nil && len(historicalValues) == 2 {
 			historical := Interval{Lo: historicalValues[0], Hi: historicalValues[1]}
-			state.HistoricalBelief = &historical
+			validity["historical_belief"] = historical.Valid()
+			if historical.Valid() {
+				state.HistoricalBelief = &historical
+			} else {
+				compliant = false
+			}
 		} else {
 			compliant = false
+			validity["historical_belief"] = false
 		}
-	}
-	if !state.Belief.Valid() {
-		return State{}, false, fmt.Errorf("invalid belief interval")
-	}
-	if state.HistoricalBelief != nil && !state.HistoricalBelief.Valid() {
-		return State{}, false, fmt.Errorf("invalid historical belief")
+	} else if ok {
+		validity["historical_belief"] = true
+	} else {
+		validity["historical_belief"] = false
+		compliant = false
 	}
 	return state, compliant, nil
+}
+
+func firstJSONObject(text string) (start, end int, ok bool) {
+	for candidate := 0; candidate < len(text); candidate++ {
+		if text[candidate] != '{' {
+			continue
+		}
+		objectEnd, balanced := balancedObjectEnd(text, candidate)
+		if balanced && json.Valid([]byte(text[candidate:objectEnd+1])) {
+			return candidate, objectEnd, true
+		}
+	}
+	return -1, -1, false
+}
+
+func balancedObjectEnd(text string, start int) (int, bool) {
+	depth := 0
+	inString := false
+	escaped := false
+	for i := start; i < len(text); i++ {
+		ch := text[i]
+		if inString {
+			if escaped {
+				escaped = false
+				continue
+			}
+			if ch == '\\' {
+				escaped = true
+				continue
+			}
+			if ch == '"' {
+				inString = false
+			}
+			continue
+		}
+		switch ch {
+		case '"':
+			inString = true
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				return i, true
+			}
+			if depth < 0 {
+				return -1, false
+			}
+		}
+	}
+	return -1, false
 }
 
 func normalizeStatus(value string) string {

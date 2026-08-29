@@ -3,6 +3,7 @@ package transfer
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -82,8 +83,43 @@ func TestParseStateLenientNormalizesSchemaDrift(t *testing.T) {
 	if state.Status != "active" || state.Action != "hold" || state.NodeStates["b1"] != "active" {
 		t.Fatalf("state = %#v", state)
 	}
+	if state.Validity["state"] || state.Validity["action"] || state.Validity["node_states"] {
+		t.Fatalf("normalized invalid fields reported valid: %#v", state.Validity)
+	}
 	if state.HistoricalBelief != nil {
 		t.Fatal("invalid nested historical interval should be ignored")
+	}
+}
+
+func TestParseStateLenientUsesFirstBalancedObject(t *testing.T) {
+	raw := `before {"belief":[0.4,0.6],"state":"active","accepted_support":[],"rejected_support":[],"node_states":{},"historical_belief":null,"action":"hold"} after } stray`
+	state, compliant, err := ParseStateLenient(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if compliant || state.Status != "active" {
+		t.Fatalf("compliant=%v state=%#v", compliant, state)
+	}
+}
+
+func TestInvalidIntervalIsMeasuredNotFatal(t *testing.T) {
+	raw := `{"belief":[0.9,0.1],"state":"active","accepted_support":[],"rejected_support":[],"node_states":{},"historical_belief":null,"action":"hold"}`
+	state, compliant, err := ParseStateLenient(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if compliant || state.Validity["belief"] {
+		t.Fatalf("compliant=%v validity=%v", compliant, state.Validity)
+	}
+}
+
+func TestMarshalStateUsesEmptyCollections(t *testing.T) {
+	raw, err := MarshalState(State{Belief: Interval{0.4, 0.6}, Status: "active", Action: "hold"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(raw, `"accepted_support":[]`) || !strings.Contains(raw, `"node_states":{}`) {
+		t.Fatalf("raw = %s", raw)
 	}
 }
 

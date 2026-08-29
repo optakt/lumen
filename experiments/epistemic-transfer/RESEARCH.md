@@ -318,12 +318,12 @@ An initial uncontrolled run let each model declare its own starting state. Stati
 
 Corrected cross-variant results:
 
-- canonical initial-state baseline: 4/16 (25%, chance);
-- full intervention trajectory: 14/16 (87.5%);
-- without protocol-compliance features: 13/16 (81.25%);
-- reference-residual features only: 14/16 (87.5%);
+- canonical-state null baseline: 4/16 (25%, chance by construction);
+- full intervention trajectory: 15/16 (93.75%);
+- without the JSON-only compliance bit: 14/16 (87.5%);
+- reference-conformance features only: 13/16 (81.25%);
 - correlation disclosure alone: 15/16 (93.75%);
-- retraction cascade alone: 12/16 (75%);
-- retrodictive validity alone: 8/16 (50%).
+- retraction cascade alone: 11/16 (68.75%);
+- retrodictive validity alone: 6/16 (37.5%; four tied cases skipped and counted incorrect).
 
 The result establishes feasibility under held-out labels/domains, not publication-level generalization. It does not yet hold out graph topology, separate provider settings from model identity, or support open-set rejection. Full methods and results: `pilot/README.md` and `pilot/RESULTS.md`.

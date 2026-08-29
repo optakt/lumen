@@ -2,17 +2,17 @@
 
 ## Result
 
-The corrected pilot identified four held-out model substrates from controlled belief-state transitions with **87.5% top-1 accuracy (14/16)** versus a **25% static baseline (4/16)**.
+The corrected pilot identified four held-out model substrates from controlled belief-state transitions with **93.75% top-1 accuracy (15/16)** versus a **25% canonical-state null baseline (4/16)**.
 
 | Representation | Correct | Accuracy |
 |---|---:|---:|
-| Canonical initial state only | 4/16 | 25.0% |
-| Full intervention trajectory | 14/16 | 87.5% |
-| Full trajectory, protocol-compliance removed | 13/16 | 81.25% |
-| Reference-residual features only | 14/16 | 87.5% |
+| Canonical-state null baseline | 4/16 | 25.0% |
+| Full intervention trajectory | 15/16 | 93.75% |
+| Full trajectory, JSON-only compliance bit removed | 14/16 | 87.5% |
+| Reference-conformance features only | 13/16 | 81.25% |
 | Operator-summary features only | 11/16 | 68.75% |
 
-Exploratory exact-binomial tail probability against 25% chance is `2.63e-7` for 14/16; the Wilson 95% interval is `[0.640, 0.965]`. These observations are not independent enough for that p-value to support a publication claim—the sample contains only four models, two runs, and paired structural variants—but the effect is large enough to justify a larger study.
+Exploratory exact-binomial tail probability against 25% chance is `1.14e-8` for 15/16; the Wilson 95% interval is `[0.717, 0.989]`. These observations are not independent enough for that p-value to support a publication claim—the sample contains only four models, two runs, and paired structural variants—but the effect is large enough to justify a larger study.
 
 ## Experimental design
 
@@ -26,14 +26,16 @@ Exploratory exact-binomial tail probability against 25% chance is `2.63e-7` for 
 
 Every conversation began from an identical, Lumen-injected canonical state. Only transitions after the first graph intervention came from the model.
 
+The 25% null baseline is a construction, not an empirical static fingerprint: all four reference vectors are identical, and deterministic tie-breaking predicts the first model. A future study must compare against a genuine static behavioral-fingerprinting baseline on separate prompts.
+
 ## Critical methodological correction
 
-The first execution (`results-uncontrolled.jsonl`) let each model declare its own initial state. It produced 94% static identification and no improvement from intervention trajectories. That was not evidence for the hypothesis; it was a broken system-identification experiment because `B0` differed by model.
+The first execution let each model declare its own initial state. It produced 94% static identification and no improvement from intervention trajectories. That was not evidence for the hypothesis; it was a broken system-identification experiment because `B0` differed by model.
 
 The runner was corrected to inject the episode reference state as the assistant's initial turn. After this change:
 
 - static identification fell to chance: 25% in both cross-variant directions;
-- full trajectories reached 87.5% in both directions.
+- full trajectories reached 87.5% in one direction and 100% in the other.
 
 This correction is the strongest evidence that the measured signal comes from state transitions rather than initial prose or confidence style.
 
@@ -44,8 +46,8 @@ Cross-variant accuracies summed over both directions:
 | Ablation | Correct | Accuracy |
 |---|---:|---:|
 | Correlation disclosure only | 15/16 | 93.75% |
-| Retraction cascade only | 12/16 | 75.0% |
-| Retrodictive validity only | 8/16 | 50.0% |
+| Retraction cascade only | 11/16 | 68.75% |
+| Retrodictive validity only | 6/16 | 37.5% (4 tied cases skipped and counted incorrect) |
 
 Correlation disclosure carries nearly all the pilot's signal. Retraction topology also carries model identity. The retrodiction episode is weak because it explicitly states the earlier posterior; models mostly retrieve the declared interval rather than reconstruct it.
 
@@ -72,16 +74,15 @@ That is exactly the kind of epistemic-operator difference the pilot was designed
 
 ### Protocol behavior
 
-Opus emitted prose outside the JSON object on arithmetic correlation steps, yielding 72.7% strict protocol compliance. The other three models were fully compliant. Removing protocol-compliance features still produced 81.25% identification, so the result is not merely a formatting fingerprint.
+Opus emitted prose outside the JSON object on arithmetic correlation steps, yielding 72.7% strict protocol compliance. The other three models were fully compliant. Removing the JSON-only compliance bit still produced 87.5% identification; field-level validity remains part of the epistemic response because malformed beliefs, states, and support sets are substantive operator behavior.
 
 ## Errors
 
-Two of sixteen held-out signatures were misidentified:
+One of sixteen held-out signatures was misidentified:
 
-- one DeepSeek run as Grok when training on variant B;
-- one Sol run as Grok when training on variant A.
+- one DeepSeek run as Grok when training on variant B.
 
-Both were near-boundary cases (distance gaps `0.0039` and `0.0007`).
+It was a near-boundary case (distance gap `0.0082`).
 
 ## What this pilot establishes
 
@@ -94,7 +95,7 @@ It establishes feasibility, not the final claim:
 - Generalization to unseen graph topology
 - Robustness across provider updates or inference configurations
 - Open-set rejection of an unseen model
-- Separation of model identity from provider-level decoding defaults
+- Separation of model identity from provider-level decoding defaults; this pilot intentionally measured endpoint identity under each provider's default sampling, now recorded per result
 - Superiority over strong static behavioral fingerprinting on a larger model panel
 - Long-term stability of the signature
 - A unique retrodiction fingerprint

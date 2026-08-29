@@ -45,7 +45,7 @@ Evaluation is cross-variant:
 
 Two representations are compared:
 
-1. **Static baseline** — only the first declared state from each family
+1. **Canonical-state null baseline** — the externally injected first state; identical across models, so attribution is deterministically at chance
 2. **Dynamic signature** — full trajectory, reference residuals, state/action transitions, support-set agreement, cascade topology, correlation discount, and retrodiction error
 
 The initial state is injected by Lumen rather than elicited from the model. This keeps `B0` identical and prevents static confidence or formatting differences from masquerading as transition dynamics.

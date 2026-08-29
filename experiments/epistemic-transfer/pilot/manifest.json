@@ -11,8 +11,11 @@
     "retrodiction-a.lm": "af6c21166ca651f8b39049523c0ff07c5c4651d29472d0a88a1eb291d60088d4",
     "retrodiction-b.lm": "ac18dbcf2d569fdc15f3237453a87b193a786d097c4d96019daaf4093fbbfa92"
   },
-  "results_sha256": "b12a7d095458ce0e1f15b16606fcb897c16daa2921ec05626fb4b4f864603e7b",
-  "analysis_sha256": "40f8981124743e1e770b6b30db73733b45da351384fcc7bff38f72011746b049",
+  "results_sha256": "a36fdfd79777a47ea4cbc789ead6790101026c5b74e90d073ae6fd11f0d62542",
+  "analysis_sha256": "d2646b1b2697105912cc511f8f07dfafc43ef732cb842d8c6f98f02886a63462",
+  "acquisition_parser": "transfer-state-v2-acquisition",
+  "analysis_parser": "transfer-state-v3",
+  "sampling": "provider defaults; per-provider max token ceilings recorded in each result row",
   "controlled_initial_state": true,
   "model_generated_transitions": 128,
   "canonical_seed_states": 48,
