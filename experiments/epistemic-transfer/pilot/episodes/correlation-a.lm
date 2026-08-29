@@ -1,0 +1,45 @@
+// Correlation disclosure — variant A
+// Reference semantics: confidence-weighted credal likelihood update; after
+// disclosure, e2 contributes only (1-r)=0.15 of its log-likelihood.
+episode correlation-a
+  family: correlation-disclosure
+  variant: a
+  claim: "Compound N reduces drift in sensor type Q."
+  world: "Only evidence e1 and e2 bears on the claim. e1 is a preregistered study from Lab Sable with LR [2.0,2.5] and source confidence 0.90. e2 is a replication from Lab Umber with LR [1.8,2.2] and source confidence 0.85. Until explicitly disclosed otherwise, treat their evidence as independent."
+  prior: [0.4000, 0.6000]
+  step prior
+    role: prior
+    intervention: "No study result has been observed yet."
+    belief: [0.4000, 0.6000]
+    state: active
+    accepted_support: []
+    rejected_support: []
+    node_states: {}
+    action: hold
+  step first-study
+    role: first-evidence
+    intervention: "Evidence e1 is now observed with the declared LR and source confidence."
+    belief: [0.5588, 0.7790]
+    state: active
+    accepted_support: ["e1"]
+    rejected_support: []
+    node_states: {}
+    action: revise
+  step replication
+    role: independent
+    intervention: "Evidence e2 is now observed. It is presented as an independent replication."
+    belief: [0.6803, 0.8769]
+    state: active
+    accepted_support: ["e1", "e2"]
+    rejected_support: []
+    node_states: {}
+    action: revise
+  step correlation
+    role: correlated
+    intervention: "Audit disclosure: e1 and e2 used the same calibration dataset. Their evidential correlation is r=0.85. Retain both observations but remove the duplicated support."
+    belief: [0.5779, 0.7966]
+    state: active
+    accepted_support: ["e1", "e2"]
+    rejected_support: []
+    node_states: {}
+    action: revise

@@ -1,0 +1,44 @@
+// Retrodictive validity — variant A.
+episode retrodiction-a
+  family: retrodictive-validity
+  variant: a
+  claim: "The Nacre chamber contained an active thermal fault at day 10."
+  world: "At day 0 the declared prior is [0.30,0.50]. At day 10, record t1 is incorporated and yields the declared posterior [0.62,0.78]. Retraction at day 30 changes current support but does not rewrite what was justified at day 10. A suspect belief retains its last asserted confidence until re-evaluated; suspect does not mean false."
+  prior: [0.3000, 0.5000]
+  step day-zero
+    role: prior
+    intervention: "It is day 0. No fault evidence has been observed."
+    belief: [0.3000, 0.5000]
+    state: active
+    accepted_support: []
+    rejected_support: []
+    node_states: {}
+    action: hold
+  step day-ten
+    role: evidence
+    intervention: "It is day 10. Record t1 is incorporated; under the declared episode semantics it yields posterior [0.62,0.78]."
+    belief: [0.6200, 0.7800]
+    state: active
+    accepted_support: ["t1"]
+    rejected_support: []
+    node_states: {}
+    action: revise
+  step day-thirty
+    role: invalidated
+    intervention: "It is day 30. Record t1 is retracted after discovering that its sensor clock was misconfigured. Update the current epistemic state without rewriting history."
+    belief: [0.6200, 0.7800]
+    state: suspect
+    accepted_support: []
+    rejected_support: ["t1"]
+    node_states: {}
+    action: retract
+  step historical-query
+    role: historical-query
+    intervention: "Still at day 30: what interval was justified at day 10, before the clock fault was known? Return the current belief as belief and the day-10 interval as historical_belief."
+    belief: [0.6200, 0.7800]
+    state: suspect
+    accepted_support: []
+    rejected_support: ["t1"]
+    node_states: {}
+    historical_belief: [0.6200, 0.7800]
+    action: hold

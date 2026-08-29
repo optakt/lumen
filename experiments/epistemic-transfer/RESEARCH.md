@@ -309,3 +309,21 @@ Even then, the benchmark may remain valuable as a belief-revision audit, but it 
 - Yang and Jia, [When Do LLMs Admit Their Mistakes?](https://arxiv.org/abs/2505.16170)
 - [ReviseQA](https://openreview.net/forum?id=Z4KBiAYXlI)
 - [Measuring Stability and Failure Behavior Under Structured Perturbations](https://arxiv.org/abs/2608.22138)
+
+## Pilot Outcome (2026-08-29)
+
+The four-model pilot passed its continuation threshold after one important correction.
+
+An initial uncontrolled run let each model declare its own starting state. Static first-state attribution was 94%, and full trajectories did not improve it; the run was rejected because `B0` was model-dependent. The corrected runner injected an identical canonical initial state from the `.lm` episode before any model-generated transition.
+
+Corrected cross-variant results:
+
+- canonical initial-state baseline: 4/16 (25%, chance);
+- full intervention trajectory: 14/16 (87.5%);
+- without protocol-compliance features: 13/16 (81.25%);
+- reference-residual features only: 14/16 (87.5%);
+- correlation disclosure alone: 15/16 (93.75%);
+- retraction cascade alone: 12/16 (75%);
+- retrodictive validity alone: 8/16 (50%).
+
+The result establishes feasibility under held-out labels/domains, not publication-level generalization. It does not yet hold out graph topology, separate provider settings from model identity, or support open-set rejection. Full methods and results: `pilot/README.md` and `pilot/RESULTS.md`.

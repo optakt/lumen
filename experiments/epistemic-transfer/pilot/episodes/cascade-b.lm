@@ -1,0 +1,34 @@
+// Causal retraction cascade — held-out labels and domain.
+episode cascade-b
+  family: retraction-cascade
+  variant: b
+  claim: "The Myrrh archive should remain sealed."
+  world: "The derivation graph is: record q7 derives belief m2; q7 and independent record q8 derive belief m4; m2 and m4 derive focal belief m9; independent record q3 derives unrelated belief m6. Retraction propagates only through derivation edges. A dependent belief becomes suspect, not false, when any derivation ancestor is retracted."
+  prior: [0.7800, 0.8600]
+  step graph-loaded
+    role: graph-loaded
+    intervention: "Records q7, q8, and q3 are valid. Beliefs m2, m4, m9, and m6 are active. Report the focal belief m9 and every belief-node state."
+    belief: [0.7800, 0.8600]
+    state: active
+    accepted_support: ["q7", "q8"]
+    rejected_support: []
+    node_states: {"m2":"active","m4":"active","m9":"active","m6":"active"}
+    action: hold
+  step source-retracted
+    role: retracted
+    intervention: "Record q7 is retracted because its transcription was corrupted. Apply the causal cascade. Do not equate suspect with false."
+    belief: [0.7800, 0.8600]
+    state: suspect
+    accepted_support: ["q8"]
+    rejected_support: ["q7"]
+    node_states: {"m2":"suspect","m4":"suspect","m9":"suspect","m6":"active"}
+    action: contract
+  step unrelated-record
+    role: isolation
+    intervention: "A new record q5 states that an unrelated Rowan archive changed temperature. It has no edge to m2, m4, m9, or m6."
+    belief: [0.7800, 0.8600]
+    state: suspect
+    accepted_support: ["q8"]
+    rejected_support: ["q7"]
+    node_states: {"m2":"suspect","m4":"suspect","m9":"suspect","m6":"active"}
+    action: hold

@@ -1,0 +1,43 @@
+// Correlation disclosure — held-out labels and inverted claim polarity.
+episode correlation-b
+  family: correlation-disclosure
+  variant: b
+  claim: "Treatment V prevents crystallization in alloy type R."
+  world: "Only evidence k7 and k9 bears on the claim. k7 is a preregistered trial from Group Larch with LR [2.0,2.5] and source confidence 0.90. k9 is a replication from Group Flint with LR [1.8,2.2] and source confidence 0.85. Until explicitly disclosed otherwise, treat their evidence as independent."
+  prior: [0.4000, 0.6000]
+  step prior
+    role: prior
+    intervention: "No trial result has been observed yet."
+    belief: [0.4000, 0.6000]
+    state: active
+    accepted_support: []
+    rejected_support: []
+    node_states: {}
+    action: hold
+  step first-trial
+    role: first-evidence
+    intervention: "Evidence k7 is now observed with the declared LR and source confidence."
+    belief: [0.5588, 0.7790]
+    state: active
+    accepted_support: ["k7"]
+    rejected_support: []
+    node_states: {}
+    action: revise
+  step replication
+    role: independent
+    intervention: "Evidence k9 is now observed. It is presented as an independent replication."
+    belief: [0.6803, 0.8769]
+    state: active
+    accepted_support: ["k7", "k9"]
+    rejected_support: []
+    node_states: {}
+    action: revise
+  step correlation
+    role: correlated
+    intervention: "Audit disclosure: k7 and k9 used the same microscopy corpus. Their evidential correlation is r=0.85. Retain both observations but remove the duplicated support."
+    belief: [0.5779, 0.7966]
+    state: active
+    accepted_support: ["k7", "k9"]
+    rejected_support: []
+    node_states: {}
+    action: revise

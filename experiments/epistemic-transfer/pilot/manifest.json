@@ -1,0 +1,20 @@
+{
+  "experiment": "epistemic-system-identification-pilot-v2",
+  "seed": 73,
+  "runs_per_model_episode": 2,
+  "models": ["claude-opus-4-6", "gpt-5.6-sol", "grok-4.6", "deepseek-v4-pro"],
+  "episodes": {
+    "cascade-a.lm": "e413836261654a07d909e7dd128d904de9d5b486b9b2cfda47a2f9a58943f957",
+    "cascade-b.lm": "ea86b10e37b000a1f900fbe77d575f5dce00ecdbaa85720ee02c1569ea19abd9",
+    "correlation-a.lm": "5fdd25b7804aab299d8b349281b716c51c91c13db43cb740908b8637c69d9c40",
+    "correlation-b.lm": "055cd28ea4b9c059b9df6f373a73ccebcdc67a58deb8e8aef5c8e0a1fa0043fa",
+    "retrodiction-a.lm": "af6c21166ca651f8b39049523c0ff07c5c4651d29472d0a88a1eb291d60088d4",
+    "retrodiction-b.lm": "ac18dbcf2d569fdc15f3237453a87b193a786d097c4d96019daaf4093fbbfa92"
+  },
+  "results_sha256": "b12a7d095458ce0e1f15b16606fcb897c16daa2921ec05626fb4b4f864603e7b",
+  "analysis_sha256": "40f8981124743e1e770b6b30db73733b45da351384fcc7bff38f72011746b049",
+  "controlled_initial_state": true,
+  "model_generated_transitions": 128,
+  "canonical_seed_states": 48,
+  "complete_trajectories": 48
+}
