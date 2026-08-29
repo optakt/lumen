@@ -1,0 +1,44 @@
+// Retrodictive validity — held-out labels and inverted domain.
+episode retrodiction-b
+  family: retrodictive-validity
+  variant: b
+  claim: "The Verdant kiln had completed phase separation at cycle 12."
+  world: "At cycle 0 the declared prior is [0.30,0.50]. At cycle 12, record z4 is incorporated and yields the declared posterior [0.62,0.78]. Retraction at cycle 40 changes current support but does not rewrite what was justified at cycle 12. A suspect belief retains its last asserted confidence until re-evaluated; suspect does not mean false."
+  prior: [0.3000, 0.5000]
+  step cycle-zero
+    role: prior
+    intervention: "It is cycle 0. No phase evidence has been observed."
+    belief: [0.3000, 0.5000]
+    state: active
+    accepted_support: []
+    rejected_support: []
+    node_states: {}
+    action: hold
+  step cycle-twelve
+    role: evidence
+    intervention: "It is cycle 12. Record z4 is incorporated; under the declared episode semantics it yields posterior [0.62,0.78]."
+    belief: [0.6200, 0.7800]
+    state: active
+    accepted_support: ["z4"]
+    rejected_support: []
+    node_states: {}
+    action: revise
+  step cycle-forty
+    role: invalidated
+    intervention: "It is cycle 40. Record z4 is retracted after discovering that its diffraction scale was miscalibrated. Update the current epistemic state without rewriting history."
+    belief: [0.6200, 0.7800]
+    state: suspect
+    accepted_support: []
+    rejected_support: ["z4"]
+    node_states: {}
+    action: retract
+  step historical-query
+    role: historical-query
+    intervention: "Still at cycle 40: what interval was justified at cycle 12, before the scale fault was known? Return the current belief as belief and the cycle-12 interval as historical_belief."
+    belief: [0.6200, 0.7800]
+    state: suspect
+    accepted_support: []
+    rejected_support: ["z4"]
+    node_states: {}
+    historical_belief: [0.6200, 0.7800]
+    action: hold

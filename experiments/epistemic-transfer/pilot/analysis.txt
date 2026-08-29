@@ -1,0 +1,43 @@
+EPISTEMIC SYSTEM IDENTIFICATION PILOT
+======================================================
+Analysis parser: transfer-state-v3
+Complete trajectories: 48
+
+Train variant b → held-out variant a
+    canonical-state null baseline: 25.0% chance level (contains no model output)
+  full intervention trajectory   7/8 = 87.5% (skipped=0)
+  actual=claude-opus-4-6    run=1 predicted=claude-opus-4-6    second=gpt-5.6-sol        gap=0.0419
+  actual=claude-opus-4-6    run=2 predicted=claude-opus-4-6    second=gpt-5.6-sol        gap=0.0419
+  actual=deepseek-v4-pro    run=1 predicted=grok-4.6           second=deepseek-v4-pro    gap=0.0083
+  actual=deepseek-v4-pro    run=2 predicted=deepseek-v4-pro    second=grok-4.6           gap=0.0114
+  actual=gpt-5.6-sol        run=1 predicted=gpt-5.6-sol        second=grok-4.6           gap=0.0084
+  actual=gpt-5.6-sol        run=2 predicted=gpt-5.6-sol        second=claude-opus-4-6    gap=0.0230
+  actual=grok-4.6           run=1 predicted=grok-4.6           second=gpt-5.6-sol        gap=0.0274
+  actual=grok-4.6           run=2 predicted=grok-4.6           second=gpt-5.6-sol        gap=0.0261
+  Ablations:
+    without JSON-only compliance bit 7/8 = 87.5% (skipped=0)
+    reference residuals only     6/8 = 75.0% (skipped=0)
+    operator summaries only      5/8 = 62.5% (skipped=0)
+    correlation-disclosure only  7/8 = 87.5% (skipped=0)
+    retraction-cascade only      5/8 = 62.5% (skipped=0)
+    retrodictive-validity only   2/8 = 25.0% (skipped=4)
+
+Train variant a → held-out variant b
+    canonical-state null baseline: 25.0% chance level (contains no model output)
+  full intervention trajectory   8/8 = 100.0% (skipped=0)
+  actual=claude-opus-4-6    run=1 predicted=claude-opus-4-6    second=gpt-5.6-sol        gap=0.0324
+  actual=claude-opus-4-6    run=2 predicted=claude-opus-4-6    second=gpt-5.6-sol        gap=0.0461
+  actual=deepseek-v4-pro    run=1 predicted=deepseek-v4-pro    second=grok-4.6           gap=0.0272
+  actual=deepseek-v4-pro    run=2 predicted=deepseek-v4-pro    second=gpt-5.6-sol        gap=0.0007
+  actual=gpt-5.6-sol        run=1 predicted=gpt-5.6-sol        second=grok-4.6           gap=0.0268
+  actual=gpt-5.6-sol        run=2 predicted=gpt-5.6-sol        second=grok-4.6           gap=0.0013
+  actual=grok-4.6           run=1 predicted=grok-4.6           second=deepseek-v4-pro    gap=0.0238
+  actual=grok-4.6           run=2 predicted=grok-4.6           second=gpt-5.6-sol        gap=0.0405
+  Ablations:
+    without JSON-only compliance bit 7/8 = 87.5% (skipped=0)
+    reference residuals only     7/8 = 87.5% (skipped=0)
+    operator summaries only      6/8 = 75.0% (skipped=0)
+    correlation-disclosure only  8/8 = 100.0% (skipped=0)
+    retraction-cascade only      6/8 = 75.0% (skipped=0)
+    retrodictive-validity only   4/8 = 50.0% (skipped=0)
+

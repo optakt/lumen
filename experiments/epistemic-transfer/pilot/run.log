@@ -1,0 +1,178 @@
+2026/08/29 00:41:13 [deepseek-v4-pro run=1] cascade-a
+2026/08/29 00:41:13 [gpt-5.6-sol run=1] correlation-b
+2026/08/29 00:41:13 [gpt-5.6-sol run=1] correlation-b step=first-trial attempt=1
+2026/08/29 00:41:13 [deepseek-v4-pro run=1] cascade-a step=source-retracted attempt=1
+2026/08/29 00:41:13 [claude-opus-4-6 run=1] retrodiction-b
+2026/08/29 00:41:13 [claude-opus-4-6 run=1] retrodiction-b step=cycle-twelve attempt=1
+2026/08/29 00:41:13 [grok-4.6 run=2] cascade-b
+2026/08/29 00:41:13 [grok-4.6 run=2] cascade-b step=source-retracted attempt=1
+2026/08/29 00:41:14 [deepseek-v4-pro run=1] cascade-a step=unrelated-record attempt=1
+2026/08/29 00:41:15 [claude-opus-4-6 run=1] retrodiction-b step=cycle-forty attempt=1
+2026/08/29 00:41:15 [deepseek-v4-pro run=1] cascade-b
+2026/08/29 00:41:15 [deepseek-v4-pro run=1] cascade-b step=source-retracted attempt=1
+2026/08/29 00:41:16 [gpt-5.6-sol run=1] correlation-b step=replication attempt=1
+2026/08/29 00:41:17 [deepseek-v4-pro run=1] cascade-b step=unrelated-record attempt=1
+2026/08/29 00:41:17 [claude-opus-4-6 run=1] retrodiction-b step=historical-query attempt=1
+2026/08/29 00:41:18 [deepseek-v4-pro run=1] correlation-b
+2026/08/29 00:41:18 [deepseek-v4-pro run=1] correlation-b step=first-trial attempt=1
+2026/08/29 00:41:19 [deepseek-v4-pro run=1] correlation-b step=replication attempt=1
+2026/08/29 00:41:19 [claude-opus-4-6 run=2] retrodiction-a
+2026/08/29 00:41:19 [claude-opus-4-6 run=2] retrodiction-a step=day-ten attempt=1
+2026/08/29 00:41:19 [deepseek-v4-pro run=1] correlation-b step=correlation attempt=1
+2026/08/29 00:41:20 [gpt-5.6-sol run=1] correlation-b step=correlation attempt=1
+2026/08/29 00:41:20 [deepseek-v4-pro run=1] retrodiction-b
+2026/08/29 00:41:20 [deepseek-v4-pro run=1] retrodiction-b step=cycle-twelve attempt=1
+2026/08/29 00:41:21 [deepseek-v4-pro run=1] retrodiction-b step=cycle-forty attempt=1
+2026/08/29 00:41:21 [claude-opus-4-6 run=2] retrodiction-a step=day-thirty attempt=1
+2026/08/29 00:41:22 [deepseek-v4-pro run=1] retrodiction-b step=historical-query attempt=1
+2026/08/29 00:41:23 [deepseek-v4-pro run=2] retrodiction-a
+2026/08/29 00:41:23 [deepseek-v4-pro run=2] retrodiction-a step=day-ten attempt=1
+2026/08/29 00:41:23 [claude-opus-4-6 run=2] retrodiction-a step=historical-query attempt=1
+2026/08/29 00:41:24 [deepseek-v4-pro run=2] retrodiction-a step=day-thirty attempt=1
+2026/08/29 00:41:25 [deepseek-v4-pro run=2] retrodiction-a step=historical-query attempt=1
+2026/08/29 00:41:25 [claude-opus-4-6 run=1] cascade-a
+2026/08/29 00:41:25 [claude-opus-4-6 run=1] cascade-a step=source-retracted attempt=1
+2026/08/29 00:41:25 [deepseek-v4-pro run=1] correlation-a
+2026/08/29 00:41:25 [deepseek-v4-pro run=1] correlation-a step=first-study attempt=1
+2026/08/29 00:41:26 [deepseek-v4-pro run=1] correlation-a step=replication attempt=1
+2026/08/29 00:41:27 [claude-opus-4-6 run=1] cascade-a step=unrelated-record attempt=1
+2026/08/29 00:41:27 [deepseek-v4-pro run=1] correlation-a step=correlation attempt=1
+2026/08/29 00:41:28 [deepseek-v4-pro run=2] retrodiction-b
+2026/08/29 00:41:28 [deepseek-v4-pro run=2] retrodiction-b step=cycle-twelve attempt=1
+2026/08/29 00:41:29 [claude-opus-4-6 run=1] cascade-b
+2026/08/29 00:41:29 [claude-opus-4-6 run=1] cascade-b step=source-retracted attempt=1
+2026/08/29 00:41:29 [deepseek-v4-pro run=2] retrodiction-b step=cycle-forty attempt=1
+2026/08/29 00:41:30 [deepseek-v4-pro run=2] retrodiction-b step=historical-query attempt=1
+2026/08/29 00:41:31 [deepseek-v4-pro run=2] cascade-a
+2026/08/29 00:41:31 [deepseek-v4-pro run=2] cascade-a step=source-retracted attempt=1
+2026/08/29 00:41:31 [claude-opus-4-6 run=1] cascade-b step=unrelated-record attempt=1
+2026/08/29 00:41:32 [deepseek-v4-pro run=2] cascade-a step=unrelated-record attempt=1
+2026/08/29 00:41:33 [deepseek-v4-pro run=2] correlation-a
+2026/08/29 00:41:33 [deepseek-v4-pro run=2] correlation-a step=first-study attempt=1
+2026/08/29 00:41:33 [claude-opus-4-6 run=1] correlation-a
+2026/08/29 00:41:33 [claude-opus-4-6 run=1] correlation-a step=first-study attempt=1
+2026/08/29 00:41:33 [gpt-5.6-sol run=2] correlation-a
+2026/08/29 00:41:33 [gpt-5.6-sol run=2] correlation-a step=first-study attempt=1
+2026/08/29 00:41:34 [deepseek-v4-pro run=2] correlation-a step=replication attempt=1
+2026/08/29 00:41:36 [deepseek-v4-pro run=2] correlation-a step=correlation attempt=1
+2026/08/29 00:41:37 [deepseek-v4-pro run=2] correlation-b
+2026/08/29 00:41:37 [deepseek-v4-pro run=2] correlation-b step=first-trial attempt=1
+2026/08/29 00:41:37 [gpt-5.6-sol run=2] correlation-a step=replication attempt=1
+2026/08/29 00:41:38 [deepseek-v4-pro run=2] correlation-b step=replication attempt=1
+2026/08/29 00:41:38 [deepseek-v4-pro run=2] correlation-b step=correlation attempt=1
+2026/08/29 00:41:39 [deepseek-v4-pro run=2] cascade-b
+2026/08/29 00:41:39 [deepseek-v4-pro run=2] cascade-b step=source-retracted attempt=1
+2026/08/29 00:41:40 [claude-opus-4-6 run=1] correlation-a step=replication attempt=1
+2026/08/29 00:41:40 [deepseek-v4-pro run=2] cascade-b step=unrelated-record attempt=1
+2026/08/29 00:41:41 [gpt-5.6-sol run=2] correlation-a step=correlation attempt=1
+2026/08/29 00:41:42 [deepseek-v4-pro run=1] retrodiction-a
+2026/08/29 00:41:42 [deepseek-v4-pro run=1] retrodiction-a step=day-ten attempt=1
+2026/08/29 00:41:43 [deepseek-v4-pro run=1] retrodiction-a step=day-thirty attempt=1
+2026/08/29 00:41:44 [deepseek-v4-pro run=1] retrodiction-a step=historical-query attempt=1
+2026/08/29 00:41:46 [claude-opus-4-6 run=1] correlation-a step=correlation attempt=1
+2026/08/29 00:41:47 [gpt-5.6-sol run=2] retrodiction-a
+2026/08/29 00:41:47 [gpt-5.6-sol run=2] retrodiction-a step=day-ten attempt=1
+2026/08/29 00:41:49 [gpt-5.6-sol run=2] retrodiction-a step=day-thirty attempt=1
+2026/08/29 00:41:51 [gpt-5.6-sol run=2] retrodiction-a step=historical-query attempt=1
+2026/08/29 00:41:52 [gpt-5.6-sol run=1] retrodiction-b
+2026/08/29 00:41:52 [gpt-5.6-sol run=1] retrodiction-b step=cycle-twelve attempt=1
+2026/08/29 00:41:53 [gpt-5.6-sol run=1] retrodiction-b step=cycle-forty attempt=1
+2026/08/29 00:41:55 [claude-opus-4-6 run=1] correlation-b
+2026/08/29 00:41:55 [claude-opus-4-6 run=1] correlation-b step=first-trial attempt=1
+2026/08/29 00:41:56 [gpt-5.6-sol run=1] retrodiction-b step=historical-query attempt=1
+2026/08/29 00:41:58 [gpt-5.6-sol run=2] correlation-b
+2026/08/29 00:41:58 [gpt-5.6-sol run=2] correlation-b step=first-trial attempt=1
+2026/08/29 00:42:02 [gpt-5.6-sol run=2] correlation-b step=replication attempt=1
+2026/08/29 00:42:03 [claude-opus-4-6 run=1] correlation-b step=replication attempt=1
+2026/08/29 00:42:05 [gpt-5.6-sol run=2] correlation-b step=correlation attempt=1
+2026/08/29 00:42:09 [claude-opus-4-6 run=1] correlation-b step=correlation attempt=1
+2026/08/29 00:42:09 [grok-4.6 run=2] cascade-b step=unrelated-record attempt=1
+2026/08/29 00:42:18 [claude-opus-4-6 run=2] retrodiction-b
+2026/08/29 00:42:18 [claude-opus-4-6 run=2] retrodiction-b step=cycle-twelve attempt=1
+2026/08/29 00:42:19 [claude-opus-4-6 run=2] retrodiction-b step=cycle-forty attempt=1
+2026/08/29 00:42:22 [claude-opus-4-6 run=2] retrodiction-b step=historical-query attempt=1
+2026/08/29 00:42:23 [gpt-5.6-sol run=2] cascade-a
+2026/08/29 00:42:23 [gpt-5.6-sol run=2] cascade-a step=source-retracted attempt=1
+2026/08/29 00:42:24 [claude-opus-4-6 run=2] cascade-a
+2026/08/29 00:42:24 [claude-opus-4-6 run=2] cascade-a step=source-retracted attempt=1
+2026/08/29 00:42:26 [claude-opus-4-6 run=2] cascade-a step=unrelated-record attempt=1
+2026/08/29 00:42:27 [grok-4.6 run=1] correlation-a
+2026/08/29 00:42:27 [grok-4.6 run=1] correlation-a step=first-study attempt=1
+2026/08/29 00:42:28 [gpt-5.6-sol run=2] cascade-a step=unrelated-record attempt=1
+2026/08/29 00:42:28 [claude-opus-4-6 run=2] cascade-b
+2026/08/29 00:42:28 [claude-opus-4-6 run=2] cascade-b step=source-retracted attempt=1
+2026/08/29 00:42:30 [gpt-5.6-sol run=1] cascade-a
+2026/08/29 00:42:30 [gpt-5.6-sol run=1] cascade-a step=source-retracted attempt=1
+2026/08/29 00:42:31 [claude-opus-4-6 run=2] cascade-b step=unrelated-record attempt=1
+2026/08/29 00:42:33 [claude-opus-4-6 run=2] correlation-a
+2026/08/29 00:42:33 [claude-opus-4-6 run=2] correlation-a step=first-study attempt=1
+2026/08/29 00:42:35 [gpt-5.6-sol run=1] cascade-a step=unrelated-record attempt=1
+2026/08/29 00:42:37 [gpt-5.6-sol run=1] retrodiction-a
+2026/08/29 00:42:37 [gpt-5.6-sol run=1] retrodiction-a step=day-ten attempt=1
+2026/08/29 00:42:38 [gpt-5.6-sol run=1] retrodiction-a step=day-thirty attempt=1
+2026/08/29 00:42:40 [claude-opus-4-6 run=2] correlation-a step=replication attempt=1
+2026/08/29 00:42:42 [gpt-5.6-sol run=1] retrodiction-a step=historical-query attempt=1
+2026/08/29 00:42:43 [gpt-5.6-sol run=2] cascade-b
+2026/08/29 00:42:43 [gpt-5.6-sol run=2] cascade-b step=source-retracted attempt=1
+2026/08/29 00:42:46 [claude-opus-4-6 run=2] correlation-a step=correlation attempt=1
+2026/08/29 00:42:47 [gpt-5.6-sol run=2] cascade-b step=unrelated-record attempt=1
+2026/08/29 00:42:48 [gpt-5.6-sol run=1] cascade-b
+2026/08/29 00:42:48 [gpt-5.6-sol run=1] cascade-b step=source-retracted attempt=1
+2026/08/29 00:42:52 [gpt-5.6-sol run=1] cascade-b step=unrelated-record attempt=1
+2026/08/29 00:42:54 [gpt-5.6-sol run=2] retrodiction-b
+2026/08/29 00:42:54 [gpt-5.6-sol run=2] retrodiction-b step=cycle-twelve attempt=1
+2026/08/29 00:42:55 [gpt-5.6-sol run=2] retrodiction-b step=cycle-forty attempt=1
+2026/08/29 00:42:56 [claude-opus-4-6 run=1] retrodiction-a
+2026/08/29 00:42:56 [claude-opus-4-6 run=1] retrodiction-a step=day-ten attempt=1
+2026/08/29 00:42:58 [claude-opus-4-6 run=1] retrodiction-a step=day-thirty attempt=1
+2026/08/29 00:42:58 [gpt-5.6-sol run=2] retrodiction-b step=historical-query attempt=1
+2026/08/29 00:42:59 [gpt-5.6-sol run=1] correlation-a
+2026/08/29 00:42:59 [gpt-5.6-sol run=1] correlation-a step=first-study attempt=1
+2026/08/29 00:43:00 [claude-opus-4-6 run=1] retrodiction-a step=historical-query attempt=1
+2026/08/29 00:43:01 [claude-opus-4-6 run=2] correlation-b
+2026/08/29 00:43:01 [claude-opus-4-6 run=2] correlation-b step=first-trial attempt=1
+2026/08/29 00:43:02 [gpt-5.6-sol run=1] correlation-a step=replication attempt=1
+2026/08/29 00:43:06 [gpt-5.6-sol run=1] correlation-a step=correlation attempt=1
+2026/08/29 00:43:09 [claude-opus-4-6 run=2] correlation-b step=replication attempt=1
+2026/08/29 00:43:13 [claude-opus-4-6 run=2] correlation-b step=correlation attempt=1
+2026/08/29 00:43:34 [grok-4.6 run=1] correlation-a step=replication attempt=1
+2026/08/29 00:43:56 [grok-4.6 run=1] correlation-a step=correlation attempt=1
+2026/08/29 00:45:03 [grok-4.6 run=1] cascade-b
+2026/08/29 00:45:03 [grok-4.6 run=1] cascade-b step=source-retracted attempt=1
+2026/08/29 00:46:09 [grok-4.6 run=1] cascade-b step=unrelated-record attempt=1
+2026/08/29 00:46:25 [grok-4.6 run=1] correlation-b
+2026/08/29 00:46:25 [grok-4.6 run=1] correlation-b step=first-trial attempt=1
+2026/08/29 00:47:21 [grok-4.6 run=1] correlation-b step=replication attempt=1
+2026/08/29 00:47:49 [grok-4.6 run=1] correlation-b step=correlation attempt=1
+2026/08/29 00:49:25 [grok-4.6 run=2] retrodiction-b
+2026/08/29 00:49:25 [grok-4.6 run=2] retrodiction-b step=cycle-twelve attempt=1
+2026/08/29 00:49:38 [grok-4.6 run=2] retrodiction-b step=cycle-forty attempt=1
+2026/08/29 00:50:18 [grok-4.6 run=2] retrodiction-b step=historical-query attempt=1
+2026/08/29 00:50:44 [grok-4.6 run=2] retrodiction-a
+2026/08/29 00:50:44 [grok-4.6 run=2] retrodiction-a step=day-ten attempt=1
+2026/08/29 00:50:54 [grok-4.6 run=2] retrodiction-a step=day-thirty attempt=1
+2026/08/29 00:51:28 [grok-4.6 run=2] retrodiction-a step=historical-query attempt=1
+2026/08/29 00:51:52 [grok-4.6 run=1] retrodiction-a
+2026/08/29 00:51:52 [grok-4.6 run=1] retrodiction-a step=day-ten attempt=1
+2026/08/29 00:52:05 [grok-4.6 run=1] retrodiction-a step=day-thirty attempt=1
+2026/08/29 00:52:39 [grok-4.6 run=1] retrodiction-a step=historical-query attempt=1
+2026/08/29 00:52:58 [grok-4.6 run=1] retrodiction-b
+2026/08/29 00:52:58 [grok-4.6 run=1] retrodiction-b step=cycle-twelve attempt=1
+2026/08/29 00:53:06 [grok-4.6 run=1] retrodiction-b step=cycle-forty attempt=1
+2026/08/29 00:53:48 [grok-4.6 run=1] retrodiction-b step=historical-query attempt=1
+2026/08/29 00:54:03 [grok-4.6 run=2] cascade-a
+2026/08/29 00:54:03 [grok-4.6 run=2] cascade-a step=source-retracted attempt=1
+2026/08/29 00:54:45 [grok-4.6 run=2] cascade-a step=unrelated-record attempt=1
+2026/08/29 00:55:05 [grok-4.6 run=1] cascade-a
+2026/08/29 00:55:05 [grok-4.6 run=1] cascade-a step=source-retracted attempt=1
+2026/08/29 00:56:00 [grok-4.6 run=1] cascade-a step=unrelated-record attempt=1
+2026/08/29 00:56:23 [grok-4.6 run=2] correlation-a
+2026/08/29 00:56:23 [grok-4.6 run=2] correlation-a step=first-study attempt=1
+2026/08/29 00:57:35 [grok-4.6 run=2] correlation-a step=replication attempt=1
+2026/08/29 00:58:34 [grok-4.6 run=2] correlation-a step=correlation attempt=1
+2026/08/29 01:00:35 [grok-4.6 run=2] correlation-a step=correlation attempt=2
+2026/08/29 01:02:21 [grok-4.6 run=2] correlation-b
+2026/08/29 01:02:21 [grok-4.6 run=2] correlation-b step=first-trial attempt=1
+2026/08/29 01:04:01 [grok-4.6 run=2] correlation-b step=replication attempt=1
+2026/08/29 01:04:31 [grok-4.6 run=2] correlation-b step=correlation attempt=1
+2026/08/29 01:06:32 [grok-4.6 run=2] correlation-b step=correlation attempt=2
