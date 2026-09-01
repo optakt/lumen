@@ -84,9 +84,9 @@ Separate Pilot 1 static baselines report leave-one-run-out attribution from opin
 
 Claude Haiku is absent from all known centroids. For each topology fold, the rejection threshold is calibrated only on known models and training topologies. The study reports both known acceptance and unknown rejection.
 
-## Comparative decision criteria
+## Falsification
 
-The benchmark stops if any of the following occur; these criteria test superiority and open-set usefulness, not whether trajectories carry any model-specific signal:
+The dynamic claim fails if any of the following occur:
 
 - full graph-operator signatures do not beat final-state and probability-only baselines on held-out topologies;
 - within-model variation approaches between-model variation;

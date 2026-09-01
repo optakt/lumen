@@ -261,7 +261,7 @@ For this comparative benchmark, the full method earns continuation only if it ad
 
 ## Falsification Criteria
 
-Abandon the claim that this is a uniquely stronger or open-set-capable model-identification method if any of these occur:
+Abandon the model-identification claim if any of these occur:
 
 - Dynamic signatures do not beat static baselines on held-out graph templates.
 - Within-model variance is comparable to between-model variance.
@@ -270,7 +270,7 @@ Abandon the claim that this is a uniquely stronger or open-set-capable model-ide
 - An unseen model is always forced into a known class rather than rejected.
 - The novel operators add no information beyond ordinary evidence accumulation.
 
-Even then, above-chance trajectory attribution may still establish a different closed-set fingerprint. It would not establish superiority, robust unknown-model rejection, or resilience after response texture is deliberately removed.
+Even then, the benchmark may remain valuable as a belief-revision audit, but it would not support the fingerprinting claim.
 
 ## Strongest Publishable Framing
 
