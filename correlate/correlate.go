@@ -28,11 +28,15 @@ type CorrelationResult struct {
 	IDa, IDb         string
 	CosineSimilarity float64
 	// EstimatedCorrelation maps cosine similarity to an epistemic correlation
-	// coefficient using a calibrated piecewise transform (see
-	// cosineToEpistemicCorrelation). Raw cosine similarity is not directly
-	// usable as a Bayesian correlation: two semantically related but logically
-	// independent claims (e.g. "fever" and "inflammation") would show high
-	// similarity but low evidential correlation.
+	// coefficient using a calibrated piecewise transform:
+	//   - Below 0.53: independent (r = 0)
+	//   - 0.53–0.65: weak shared root (r = 0.0–0.40)
+	//   - 0.65–0.82: moderate shared root (r = 0.40–0.65)
+	//   - 0.82–1.00: strong shared root (r = 0.65–1.0)
+	// Raw cosine similarity is not directly usable as a Bayesian correlation:
+	// two semantically related but logically independent claims (e.g. "fever"
+	// and "inflammation") would show high similarity but low evidential
+	// correlation.
 	EstimatedCorrelation float64
 	Interpretation       string
 }

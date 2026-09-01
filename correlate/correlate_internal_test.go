@@ -73,6 +73,29 @@ func TestEmbedOutOfRangeIndex(t *testing.T) {
 	}
 }
 
+// TestEmbedNegativeIndex verifies a negative index returns an error rather
+// than panicking on a slice underflow.
+func TestEmbedNegativeIndex(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"data": []map[string]any{{"index": -1, "embedding": []float64{1, 2, 3}}},
+		})
+	}))
+	defer server.Close()
+
+	orig := voyageEndpoint
+	voyageEndpoint = server.URL
+	defer func() { voyageEndpoint = orig }()
+
+	_, err := Embed("test-key", []string{"a"})
+	if err == nil {
+		t.Fatal("expected negative index error, got nil")
+	}
+	if !strings.Contains(err.Error(), "out of range") {
+		t.Fatalf("expected out-of-range error, got: %v", err)
+	}
+}
+
 // TestEmbedMissingEmbedding verifies that an omitted embedding is reported
 // rather than surfacing later as a confusing zero-vector or dimension error.
 func TestEmbedMissingEmbedding(t *testing.T) {
