@@ -14,16 +14,16 @@ The reviewer checked:
 - open-set threshold independence;
 - unknown-model exclusion from centroids;
 - provider and episode provenance binding;
-- whether the negative conclusion was stronger than the evidence.
+- whether the comparative conclusion was stronger than the evidence.
 
 No critical issue or direct leakage path was found. Accuracy arithmetic and the exact `p=0.8804` full-versus-texture comparison were independently verified.
 
 Residual cautions:
 
-1. The final texture and full structured signature use different information channels; this does not rescue the uniqueness claim, because the proposed Lumen mechanism still fails to outperform a simple conventional fingerprint.
+1. The final texture and full structured signature use different information channels. This supports describing Lumen as a different mechanism, but does not establish comparative superiority because it fails to outperform a simple conventional fingerprint.
 2. Five paired comparisons were not multiplicity-corrected. Bonferroni removes the subsidiary significance of full-versus-final-structured and full-versus-probability, but does not affect the headline texture comparison.
 3. `p=0.8804` is failure to show superiority, not proof of equivalence. Overlapping Wilson intervals support the cautious wording.
 4. Pilot 1 static baselines are a separate, easier acquisition regime and must not be treated as topology-held-out comparisons.
 5. Uniform feature weighting is one design choice; tuning weights on this test set would be overfitting and is intentionally not attempted.
 
-The reviewer concluded that the predeclared falsification criteria were consistently applied and that no identified issue would change the accuracy, paired test, open-set failure, or negative verdict.
+The reviewer concluded that the predeclared criteria were consistently applied and that no identified issue would change the accuracy, paired test, open-set failure, or negative comparative verdict. The review did not test deliberate response-texture removal.

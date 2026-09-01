@@ -257,11 +257,11 @@ Use a generic classifier only as a baseline. The contribution is the interpretab
 4. Bayesian-only trajectory features inspired by BayesBench / information-processing gap.
 5. Full Lumen graph-operator signature.
 
-The full method is useful only if it adds attribution accuracy or cross-template generalization beyond the Bayesian-only and static behavioral baselines.
+For this comparative benchmark, the full method earns continuation only if it adds attribution accuracy or cross-template generalization beyond the Bayesian-only and static behavioral baselines. That decision rule tests comparative advantage, not whether belief-revision trajectories carry a distinct identification signal at all.
 
 ## Falsification Criteria
 
-Abandon the model-identification claim if any of these occur:
+Abandon the claim that this is a uniquely stronger or open-set-capable model-identification method if any of these occur:
 
 - Dynamic signatures do not beat static baselines on held-out graph templates.
 - Within-model variance is comparable to between-model variance.
@@ -270,7 +270,7 @@ Abandon the model-identification claim if any of these occur:
 - An unseen model is always forced into a known class rather than rejected.
 - The novel operators add no information beyond ordinary evidence accumulation.
 
-Even then, the benchmark may remain valuable as a belief-revision audit, but it would not support the fingerprinting claim.
+Even then, above-chance trajectory attribution may still establish a different closed-set fingerprint. It would not establish superiority, robust unknown-model rejection, or resilience after response texture is deliberately removed.
 
 ## Strongest Publishable Framing
 
@@ -330,7 +330,7 @@ The result establishes feasibility under held-out labels/domains, not publicatio
 
 ## Topology-Held-Out Study Outcome (2026-08-29)
 
-The stronger follow-up study falsified the model-identification claim at its predeclared decision boundary.
+The stronger follow-up study failed the predeclared superiority and open-set decision boundaries. It did not falsify model identification from epistemic transitions as such.
 
 Design: eight known endpoints plus Haiku open-set, five intervention families, four held-out graph topologies, two surface variants, two runs, 720 complete trajectories. Primitive evidence values were held constant across topology folds; only connectivity varied. Qwen was excluded after quota exhaustion, and Fable was unavailable.
 
@@ -339,10 +339,12 @@ Results:
 - full Lumen graph-operator signature: 98/128 (76.56%);
 - final-state hashed texture on the same held-out topology: 96/128 (75.00%);
 - paired exact McNemar: `p=0.8804`;
+- probability trajectories alone: 83/128 (64.84%);
+- graph/state trajectories alone: 75/128 (58.59%; two ties counted wrong);
 - operator summaries alone: 37/128 (28.91%);
 - within/between distance AUROC: `0.8421`;
 - Haiku open-set rejection: 0/16 at a training-only 95th-percentile threshold;
 - leave-one-known-model-out rejection: 24/128 (18.75%);
 - separate Pilot 1 static texture baseline: 24/24 (100%).
 
-The trajectories carry real, interpretable endpoint-specific signal, but they do not outperform ordinary final-output texture and they fail open-set identification. Under the falsification criteria above, stop expanding the fingerprinting benchmark and do not tune weights or episode selection against this test set. The complete corpus, analysis, negative result, and independent Opus review are in `topology-study/`.
+The trajectories carry real, interpretable endpoint-specific signal: every non-texture representation above remained above the eight-class chance rate of 12.5%, and each intervention family independently reached 42.19–46.88%. The study did not show that this signal outperforms ordinary final-output texture, survives deliberate texture removal, or supports open-set identification. Under the decision criteria above, stop expanding the comparative benchmark and do not tune weights or episode selection against this test set. The complete corpus, analysis, bounded negative result, and independent Opus review are in `topology-study/`.
