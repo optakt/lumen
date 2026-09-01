@@ -2,13 +2,13 @@
 
 ## Verdict
 
-The study **does not support the strong model-identification claim**.
+The study **does not support superiority over response texture or reliable open-set identification**. It does support a different, above-chance closed-set identification signal from epistemic transitions.
 
 Controlled belief-revision trajectories contain stable model-specific signal and identify eight known black-box endpoints on unseen graph topologies with **76.56% top-1 accuracy**. However, a directly comparable final-response hashed-texture baseline reaches **75.00%**. The paired difference is negligible and non-significant (`McNemar exact p=0.8804`).
 
-The Lumen-native operator summaries alone reach **28.91%**. Open-set rejection also fails: the calibrated matcher rejects **0/16** Haiku signatures, although distance ranking has AUROC `0.7612`.
+Without the hashed-texture representation, probability trajectories reach **64.84%**, graph/state trajectories **58.59%**, and Lumen-native operator summaries **28.91%**, all above the eight-class chance rate of 12.5%. Each intervention family alone reaches 42.19–46.88%. Open-set rejection fails: the calibrated matcher rejects **0/16** Haiku signatures, although distance ranking has AUROC `0.7612`.
 
-Under the predeclared falsification criteria, the claim that formal belief-graph transition geometry provides a uniquely stronger model fingerprint must be abandoned.
+Under the predeclared decision criteria, the claim that formal belief-graph transition geometry provides a uniquely stronger, open-set-capable fingerprint must be abandoned. The study did not directly remove or normalize response texture, so robustness to that intervention remains untested rather than disproved.
 
 ## Corpus
 
@@ -117,7 +117,7 @@ These were acquired earlier on 14 identical static probes and evaluated leave-on
 - Opinion/confidence: 23/24 = 95.83%
 - Hashed response texture: 24/24 = 100.00%
 
-They reinforce the negative conclusion: ordinary static behavior already identifies these endpoints more accurately in its easier acquisition regime.
+They show that ordinary static behavior identifies these endpoints more accurately in its easier acquisition regime. They do not test whether epistemic-transition fingerprints survive deliberate removal of response texture.
 
 ## Design corrections made before final acquisition
 
@@ -134,7 +134,7 @@ The final corpus incorporates several rejected intermediate designs:
 
 ## What remains valuable
 
-The model-identification mechanism is not uniquely competitive, but Lumen still exposes interpretable differences that a text classifier cannot explain:
+The model-identification mechanism is different, but was not shown to be more accurate than response texture or robust after texture removal. Lumen exposes interpretable differences that a text classifier cannot explain:
 
 - confidence response to correlated evidence;
 - propagation choices after causal retraction;
@@ -148,4 +148,4 @@ The 0.8421 within/between distance AUROC suggests a possible use as an **epistem
 
 Stop expanding the model-fingerprinting benchmark.
 
-Do not tune feature weights, thresholds, or episode selection against this test set. Doing so would convert a clean negative result into overfitting. Preserve the corpus and analysis as evidence that the hypothesis was tested and failed at the point where a conventional texture baseline matched it.
+Do not tune feature weights, thresholds, or episode selection against this test set. Doing so would convert a clean comparative result into overfitting. Preserve the corpus and analysis as evidence that the superiority and open-set hypotheses failed, while distinct closed-set epistemic-transition signal remained.

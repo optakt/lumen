@@ -27,3 +27,7 @@ Residual cautions:
 5. Uniform feature weighting is one design choice; tuning weights on this test set would be overfitting and is intentionally not attempted.
 
 The reviewer concluded that the predeclared falsification criteria were consistently applied and that no identified issue would change the accuracy, paired test, open-set failure, or negative verdict.
+
+---
+
+**Addendum (2026-09-01):** The study conclusion was narrowed after this review. The verdict and accuracy findings are unchanged. The narrowing distinguishes failure of superiority and open-set claims from failure of the identification method itself: non-texture representations (probability trajectories 64.84%, graph/state 58.59%, operator summaries 28.91%) remained above the eight-class chance rate of 12.5%. Deliberate response-texture removal was not tested by this review or the study.
