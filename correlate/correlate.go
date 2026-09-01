@@ -15,33 +15,32 @@ import (
 	"time"
 )
 
-const voyageEndpoint = "https://api.voyageai.com/v1/embeddings"
+var voyageEndpoint = "https://api.voyageai.com/v1/embeddings"
 
 // EvidencePair holds two evidence descriptions for correlation analysis.
 type EvidencePair struct {
-	IDa, IDb       string
-	TextA, TextB   string
+	IDa, IDb     string
+	TextA, TextB string
 }
 
 // CorrelationResult is the estimated correlation between two pieces of evidence.
 type CorrelationResult struct {
-	IDa, IDb        string
+	IDa, IDb         string
 	CosineSimilarity float64
 	// EstimatedCorrelation maps cosine similarity to an epistemic correlation
-	// coefficient using a calibrated transform. Raw cosine similarity is not
-	// directly usable as a Bayesian correlation: two semantically related but
-	// logically independent claims (e.g. "fever" and "inflammation") would show
-	// high similarity but low evidential correlation.
-	// We apply: r = max(0, 2*(cosine - threshold)) where threshold ≈ 0.6
-	// This zeroes out similarity below the threshold and scales the rest.
+	// coefficient using a calibrated piecewise transform (see
+	// cosineToEpistemicCorrelation). Raw cosine similarity is not directly
+	// usable as a Bayesian correlation: two semantically related but logically
+	// independent claims (e.g. "fever" and "inflammation") would show high
+	// similarity but low evidential correlation.
 	EstimatedCorrelation float64
 	Interpretation       string
 }
 
 type voyageRequest struct {
-	Input          []string `json:"input"`
-	Model          string   `json:"model"`
-	InputType      string   `json:"input_type"`
+	Input     []string `json:"input"`
+	Model     string   `json:"model"`
+	InputType string   `json:"input_type"`
 }
 
 type voyageResponse struct {
@@ -86,7 +85,15 @@ func Embed(apiKey string, texts []string) ([][]float64, error) {
 	// Sort by index to preserve input order
 	result := make([][]float64, len(texts))
 	for _, item := range vr.Data {
+		if item.Index < 0 || item.Index >= len(result) {
+			return nil, fmt.Errorf("voyage response index %d out of range [0,%d)", item.Index, len(result))
+		}
 		result[item.Index] = item.Embedding
+	}
+	for i := range result {
+		if result[i] == nil {
+			return nil, fmt.Errorf("voyage response missing embedding for index %d", i)
+		}
 	}
 	return result, nil
 }
@@ -110,10 +117,10 @@ func CosineSimilarity(a, b []float64) (float64, error) {
 
 // cosineToEpistemicCorrelation maps raw cosine similarity to an epistemic
 // correlation coefficient. The mapping is:
-//   - Below 0.55: treat as independent (r = 0)
-//   - 0.55–0.70: weak shared root (r = 0.0–0.3)
-//   - 0.70–0.85: moderate shared root (r = 0.3–0.6)
-//   - 0.85–1.00: strong shared root (r = 0.6–1.0)
+//   - Below 0.53: treat as independent (r = 0)
+//   - 0.53–0.65: weak shared root (r = 0.0–0.40)
+//   - 0.65–0.82: moderate shared root (r = 0.40–0.65)
+//   - 0.82–1.00: strong shared root (r = 0.65–1.0)
 //
 // These thresholds are calibrated on philosophical argument texts where:
 // - Distinct arguments from the same tradition score ~0.65–0.75
@@ -272,6 +279,9 @@ func (m *PairwiseMatrix) HighCorrelationPairs(threshold float64) []CorrelationRe
 func (m *PairwiseMatrix) MostIsolated() StoreEvidence {
 	if len(m.Sources) == 0 {
 		return StoreEvidence{}
+	}
+	if len(m.Sources) == 1 {
+		return m.Sources[0]
 	}
 	minAvg := math.MaxFloat64
 	minIdx := 0
